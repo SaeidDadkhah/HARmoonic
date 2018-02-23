@@ -133,14 +133,24 @@ class CNN:
                                        feed_dict={self.__X: batch_x,
                                                   self.__Y: batch_y})
                     cost_history = np.append(cost_history, c)
-                    print("Epoch:",
-                          epoch + 1,
-                          " Training Loss:",
-                          c,
-                          " Training Accuracy:",
-                          session.run(self.__accuracy,
-                                      feed_dict={self.__X: self.__train_x,
-                                                 self.__Y: self.__train_y}))
+                    # print("Epoch:",
+                    #       epoch + 1,
+                    #       " Training Loss:",
+                    #       c,
+                    #       " Training Accuracy:",
+                    #       session.run(self.__accuracy,
+                    #                   feed_dict={self.__X: self.__train_x,
+                    #                              self.__Y: self.__train_y}),
+                    #       " Testing Accuracy:",
+                    #       session.run(self.__accuracy,
+                    #                   feed_dict={self.__X: self.__test_x,
+                    #                              self.__Y: self.__test_x})
+                    #       )
+                print(epoch, end='. ')
+                print("Training Accuracy:",
+                      session.run(self.__accuracy,
+                                  feed_dict={self.__X: self.__train_x,
+                                             self.__Y: self.__train_y}), end=' ')
                 print("Testing Accuracy:",
                       session.run(self.__accuracy,
                                   feed_dict={self.__X: self.__test_x,

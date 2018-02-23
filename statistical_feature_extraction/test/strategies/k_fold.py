@@ -19,7 +19,6 @@ def __k_fold_accuracy(x, y, model, k):
     kf = KFold(n_splits=k)
     accuracy_list = []
     for train_index, test_index in kf.split(x):
-        print('a')
         x_train = x.iloc[train_index]
         y_train = y.iloc[train_index]
         x_test = x.iloc[test_index]
@@ -35,7 +34,7 @@ def __k_fold_confusion_matrix(x, y, model, k):
     kf = KFold(n_splits=k)
     confusion_matrix_list = np.zeros(shape=(19, 19))
     for train_index, test_index in kf.split(x):
-        print('a')
+        print('cm')
         x_train = x.iloc[train_index]
         y_train = y.iloc[train_index]
         x_test = x.iloc[test_index]

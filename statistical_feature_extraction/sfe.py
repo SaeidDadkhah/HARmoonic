@@ -1,6 +1,4 @@
 # coding=utf-8
-from __future__ import print_function
-
 import numpy as np
 import os
 import pandas as pd
@@ -14,6 +12,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.gaussian_process import GaussianProcessClassifier
 
 from statistical_feature_extraction.test import protocol
 from statistical_feature_extraction.test import executor
@@ -39,7 +39,9 @@ MODELS = {
     "LINEAR_SVC": 3,
     "KNN": 4,
     "GAUSSIAN_NB": 5,
-    "MLP_CLASSIFIER": 6
+    "MLP_CLASSIFIER": 6,
+    "DECISION_TREE": 7,
+    "GAUSSIAN_PROCESS": 8
 }
 
 
@@ -61,6 +63,10 @@ class HAR:
                 "model": GaussianNB()
             }, {
                 "model": MLPClassifier()
+            }, {
+                "model": DecisionTreeClassifier()
+            }, {
+                "model": GaussianProcessClassifier()
             }
         ]
         self.__selected_models = []
@@ -73,10 +79,9 @@ class HAR:
         root_dir = '.\\data\\'
         self.__data = pd.DataFrame()
         for dir_name, subdir_list, file_list in os.walk(root_dir):
-            print(dir_name.split(os.sep))
             data_list = list()
             for f in file_list:
-                sensors_data = pd.read_csv(dir_name + '\\' + f, header=None)
+                sensors_data = pd.read_csv(dir_name + os.sep + f, header=None)
                 sensors_data = _feature_extraction(sensors_data)
                 sensors_data.set_value(_feature_vector_size, dir_name.split(os.sep)[3])
                 sensors_data.set_value(_feature_vector_size + 1, dir_name.split(os.sep)[2])
@@ -223,13 +228,15 @@ def main():
     # har.train()
     result_list = har.test(protocol.TEST_STRATEGIES["K_FOLD"],
                            protocol.TEST_RESULTS["CONFUSION_MATRIX"])
-
-    # print(np.mean(result_list), end=' ±')
-    # print(np.std(result_list))
     for ii in range(0, 19):
         for jj in range(0, 19):
             print('{:3d}'.format(int(result_list[0][ii][jj])), end='  ')
         print()
+
+    result_list = har.test(protocol.TEST_STRATEGIES["K_FOLD"],
+                           protocol.TEST_RESULTS["ACCURACY"])
+    print(np.mean(result_list), end=' ±')
+    print(np.std(result_list))
 
 
 if __name__ == "__main__":

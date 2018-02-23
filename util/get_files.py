@@ -11,5 +11,5 @@ def get_file():
                   dir_name.split(os.sep)[3],\
                   dir_name.split(os.sep)[2]
             c += 1
-            if c > 5:
-                break
+            # if c > 5:
+            #     break
