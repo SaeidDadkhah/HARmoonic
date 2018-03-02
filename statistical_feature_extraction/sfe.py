@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -32,16 +33,26 @@ _columns.append('activity')
 
 _nominal_columns = [_columns[-2], _columns[-1]]
 
+
+LOGISTIC_REGRESSION = "LOGISTIC_REGRESSION"
+RANDOM_FOREST = "RANDOM_FOREST"
+SVM = "SVC"
+LINEAR_SVC = "LINEAR_SVC"
+KNN = "KNN"
+GAUSSIAN_NB = "GAUSSIAN_NB"
+MLP = "MLP"
+DECISION_TREE = "DECISION_TREE"
+GAUSSIAN_PROCESS = "GAUSSIAN_PROCESS"
 MODELS = {
-    "LOGISTIC_REGRESSION": 0,
-    "RANDOM_FOREST": 1,
-    "SVC": 2,
-    "LINEAR_SVC": 3,
-    "KNN": 4,
-    "GAUSSIAN_NB": 5,
-    "MLP_CLASSIFIER": 6,
-    "DECISION_TREE": 7,
-    "GAUSSIAN_PROCESS": 8
+    LOGISTIC_REGRESSION: 0,
+    RANDOM_FOREST: 1,
+    SVM: 2,
+    LINEAR_SVC: 3,
+    KNN: 4,
+    GAUSSIAN_NB: 5,
+    MLP: 6,
+    DECISION_TREE: 7,
+    GAUSSIAN_PROCESS: 8,
 }
 
 
@@ -76,7 +87,7 @@ class HAR:
         self.__test_y = None
 
     def load_data(self):
-        root_dir = '.\\data\\'
+        root_dir = './data/'
         self.__data = pd.DataFrame()
         for dir_name, subdir_list, file_list in os.walk(root_dir):
             data_list = list()
@@ -126,6 +137,13 @@ class HAR:
         x = pca.fit_transform(x)  # type: pd.DataFrame
         self.__data = pd.DataFrame(x).join(y)
 
+    def dimensionality_lda_reduction(self, new_dimension):
+        lda = LinearDiscriminantAnalysis(n_components=new_dimension)
+        y = self.__data[_nominal_columns]
+        x = self.__data.drop(_nominal_columns, axis=1)
+        x = lda.fit_transform(x, y['activity'])  # type: pd.DataFrame
+        self.__data = pd.DataFrame(x).join(y)
+
     def drop_extra_features(self):
         y = self.__data[['activity']]
         x = self.__data.drop(_nominal_columns, axis=1)
@@ -148,12 +166,11 @@ class HAR:
         for model in self.__selected_models:
             self.__models[model]["model"].fit(self.__train_x, self.__train_y)
 
-    def test(self, strategy, result):
+    def test(self, strategy):
         test_result_list = list()
 
         for model in self.__selected_models:
             test_result_list.append(executor.test(strategy=strategy,
-                                                  result=result,
                                                   x=self.__data.drop('activity', axis=1),
                                                   y=self.__data['activity'],
                                                   model=self.__models[model]["model"],
@@ -221,22 +238,34 @@ def main():
     print('loaded')
     har.shuffle()
     har.normalize()
-    har.dimensionality_reduction(30)
+    # har.dimensionality_reduction(30)
+    har.dimensionality_lda_reduction(19)
     # har.split_data(0.4)
     har.drop_extra_features()
-    har.select_models([MODELS["GAUSSIAN_NB"]])
-    # har.train()
-    result_list = har.test(protocol.TEST_STRATEGIES["K_FOLD"],
-                           protocol.TEST_RESULTS["CONFUSION_MATRIX"])
-    for ii in range(0, 19):
-        for jj in range(0, 19):
-            print('{:3d}'.format(int(result_list[0][ii][jj])), end='  ')
-        print()
+    models = [
+        LOGISTIC_REGRESSION,
+        RANDOM_FOREST,
+        SVM,
+        LINEAR_SVC,
+        KNN,
+        GAUSSIAN_NB,
+        MLP,
+        DECISION_TREE
+    ]
+    for model in models:
+        har.select_models(models=[MODELS[model]])
+        # har.train()
 
-    result_list = har.test(protocol.TEST_STRATEGIES["K_FOLD"],
-                           protocol.TEST_RESULTS["ACCURACY"])
-    print(np.mean(result_list), end=' ±')
-    print(np.std(result_list))
+        result_list = har.test(protocol.TEST_STRATEGIES["K_FOLD"])
+        cm = result_list[0][executor.k_fold.CONFUSION_MATRIX]
+        for ii in range(0, 19):
+            for jj in range(0, 19):
+                print('{:3d}'.format(int(cm[ii][jj])), end='  ')
+            print()
+
+        accuracy = result_list[0][executor.k_fold.ACCURACY]
+        print(np.mean(accuracy), end=' ±')
+        print(np.std(accuracy), end='\n\n')
 
 
 if __name__ == "__main__":

@@ -2,12 +2,11 @@ from statistical_feature_extraction.test import protocol
 from statistical_feature_extraction.test.strategies import k_fold
 
 
-def test(strategy, result, x, y, model, k=None):
+def test(strategy, x, y, model, k=None):
     if strategy == protocol.TEST_STRATEGIES["REPEATED_RANDOM_SUB_SAMPLING"]:
         pass
     elif strategy == protocol.TEST_STRATEGIES["K_FOLD"]:
-        return k_fold.k_fold_cv(result_mode=result,
-                                x=x,
+        return k_fold.k_fold_cv(x=x,
                                 y=y,
                                 model=model,
                                 k=k)

@@ -3,8 +3,3 @@ TEST_STRATEGIES = {
     "K_FOLD": 1,
     "LEAVE_ONE_OUT": 2
 }
-
-TEST_RESULTS = {
-    "ACCURACY": 0,
-    "CONFUSION_MATRIX": 1
-}
