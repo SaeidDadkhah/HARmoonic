@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -15,6 +16,7 @@ from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process.kernels import RBF
 
 from statistical_feature_extraction.test import protocol
 from statistical_feature_extraction.test import executor
@@ -43,6 +45,8 @@ GAUSSIAN_NB = "GAUSSIAN_NB"
 MLP = "MLP"
 DECISION_TREE = "DECISION_TREE"
 GAUSSIAN_PROCESS = "GAUSSIAN_PROCESS"
+ADABOOST = "ADABOOST"
+RADIAL_BASIS_FUNCTION = "RADIAL_BASIS_FUNCTION"
 MODELS = {
     LOGISTIC_REGRESSION: 0,
     RANDOM_FOREST: 1,
@@ -53,6 +57,8 @@ MODELS = {
     MLP: 6,
     DECISION_TREE: 7,
     GAUSSIAN_PROCESS: 8,
+    ADABOOST: 9,
+    RADIAL_BASIS_FUNCTION: 10,
 }
 
 
@@ -78,6 +84,10 @@ class HAR:
                 "model": DecisionTreeClassifier()
             }, {
                 "model": GaussianProcessClassifier()
+            }, {
+                "model": AdaBoostClassifier(DecisionTreeClassifier(), n_estimators=50)
+            }, {
+                "model": RBF()
             }
         ]
         self.__selected_models = []
@@ -87,7 +97,7 @@ class HAR:
         self.__test_y = None
 
     def load_data(self):
-        root_dir = './data/'
+        root_dir = os.sep.join(['.', 'data', ''])
         self.__data = pd.DataFrame()
         for dir_name, subdir_list, file_list in os.walk(root_dir):
             data_list = list()
@@ -230,10 +240,9 @@ def main():
     if reload_data:
         har.load_data()
         if save_info:
-            har.save_pickle('./statistical_feature_extraction/sample5.pkl')
+            har.save_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl']))
     else:
-        har.load_pickle('./statistical_feature_extraction/sample5.pkl')
-        # har.save_csv('./sample.csv')
+        har.load_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl']))
 
     print('loaded')
     har.shuffle()
@@ -243,14 +252,16 @@ def main():
     # har.split_data(0.4)
     har.drop_extra_features()
     models = [
-        LOGISTIC_REGRESSION,
-        RANDOM_FOREST,
-        SVM,
-        LINEAR_SVC,
-        KNN,
-        GAUSSIAN_NB,
-        MLP,
-        DECISION_TREE
+        # LOGISTIC_REGRESSION,
+        # RANDOM_FOREST,
+        # SVM,
+        # LINEAR_SVC,
+        # KNN,
+        # GAUSSIAN_NB,
+        # MLP,
+        # DECISION_TREE,
+        ADABOOST,
+        # RADIAL_BASIS_FUNCTION,
     ]
     for model in models:
         har.select_models(models=[MODELS[model]])
