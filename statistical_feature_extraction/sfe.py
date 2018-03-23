@@ -70,6 +70,9 @@ TEST_STRATEGIES = [
 class HAR:
     def __init__(self):
         self.__data = None  # type: pd.DataFrame
+        self.__min_max_scaler = None  # type: MinMaxScaler
+        self.__pca = None  # type: PCA
+        self.__lda = None  # type: LinearDiscriminantAnalysis
         self.__models = [
             {
                 "model": LogisticRegression()
@@ -106,7 +109,7 @@ class HAR:
             root_dir = os.sep.join(['.', 'data', ''])
         self.__data = pd.DataFrame()
         for dir_name, subdir_list, file_list in os.walk(root_dir):
-            data_list = list()
+            # data_list = list()
             print(dir_name)
             for f in file_list:
                 sensors_data = pd.read_csv(dir_name + os.sep + f, header=None)
@@ -115,11 +118,22 @@ class HAR:
                 sensors_data.set_value(_feature_vector_size + 1, dir_name.split(os.sep)[-2])
                 sensors_data = sensors_data.to_frame().T
                 sensors_data.columns = _columns
-                data_list.append(sensors_data)
+                # data_list.append(sensors_data)
                 self.__data = self.__data.append(sensors_data)
-                break
 
         print(self.__data.tail())
+
+    def load_instance(self, path=None):
+        if path is None:
+            path = os.sep.join(['.', 'data', 'a01', 'p1', 's01.txt'])
+        self.__test_x = pd.DataFrame()
+        sensors_data = pd.read_csv(path, header=None)
+        sensors_data = _feature_extraction(sensors_data)
+        sensors_data.set_value(_feature_vector_size, 'p?')
+        sensors_data.set_value(_feature_vector_size + 1, 'a??')
+        sensors_data = sensors_data.to_frame().T
+        sensors_data.columns = _columns
+        self.__test_x = self.__test_x.append(sensors_data)
 
     def save_pickle(self, path):
         self.__data.to_pickle(path)
@@ -146,38 +160,53 @@ class HAR:
     def shuffle(self):
         self.__data = self.__data.sample(frac=1).reset_index(drop=True)
 
-    def normalize(self):
-        min_max_scaler = MinMaxScaler()
-        y = self.__data[_nominal_columns]
-        x = self.__data.drop(_nominal_columns, axis=1)
-        x = min_max_scaler.fit_transform(x)  # type: pd.DataFrame
-        self.__data = pd.DataFrame(x).join(y)
+    def normalize(self, train=True):
+        if train:
+            y = self.__data[_nominal_columns]
+            x = self.__data.drop(_nominal_columns, axis=1)
+            self.__min_max_scaler = MinMaxScaler()
+            x = self.__min_max_scaler.fit_transform(x)  # type: pd.DataFrame
+            self.__data = pd.DataFrame(x).join(y)
+        else:
+            y = self.__test_x[_nominal_columns]
+            x = self.__test_x.drop(_nominal_columns, axis=1)
+            x = self.__min_max_scaler.transform(x)  # type: pd.DataFrame
+            self.__test_x = pd.DataFrame(x).join(y)
 
-    def dimensionality_reduction(self, new_dimension):
-        pca = PCA(n_components=new_dimension)
-        y = self.__data[_nominal_columns]
-        x = self.__data.drop(_nominal_columns, axis=1)
-        x = pca.fit_transform(x)  # type: pd.DataFrame
-        self.__data = pd.DataFrame(x).join(y)
+    def pca(self, new_dimension=1, train=True):
+        if train:
+            y = self.__data[_nominal_columns]
+            x = self.__data.drop(_nominal_columns, axis=1)
+            self.__pca = PCA(n_components=new_dimension)
+            x = self.__pca.fit_transform(x)  # type: pd.DataFrame
+            self.__data = pd.DataFrame(x).join(y)
+        else:
+            y = self.__test_x[_nominal_columns]
+            x = self.__test_x.drop(_nominal_columns, axis=1)
+            x = self.__pca.transform(x)  # type: pd.DataFrame
+            self.__test_x = pd.DataFrame(x).join(y)
 
-    def dimensionality_lda_reduction(self, new_dimension):
-        lda = LinearDiscriminantAnalysis(n_components=new_dimension)
-        y = self.__data[_nominal_columns]
-        x = self.__data.drop(_nominal_columns, axis=1)
-        x = lda.fit_transform(x, y['activity'])  # type: pd.DataFrame
-        self.__data = pd.DataFrame(x).join(y)
+    def lda(self, new_dimension=1, train=True):
+        if train:
+            y = self.__data[_nominal_columns]
+            x = self.__data.drop(_nominal_columns, axis=1)
+            self.__lda = LinearDiscriminantAnalysis(n_components=new_dimension)
+            x = self.__lda.fit_transform(x, y['activity'])  # type: pd.DataFrame
+            self.__data = pd.DataFrame(x).join(y)
+        else:
+            y = self.__test_x[_nominal_columns]
+            x = self.__test_x.drop(_nominal_columns, axis=1)
+            x = self.__lda.transform(x)  # type: pd.DataFrame
+            self.__test_x = pd.DataFrame(x).join(y)
 
     def drop_extra_features(self):
         y = self.__data[['activity']]
         x = self.__data.drop(_nominal_columns, axis=1)
         self.__data = pd.DataFrame(x).join(y)
 
-    def split_data(self, test_size=0.0):
-        self.__train_x, self.__test_x = train_test_split(self.__data, test_size=test_size)
-        self.__train_y = self.__train_x[['activity']]
-        self.__train_x = self.__train_x.drop('activity', axis=1)
-        self.__test_y = self.__test_x[['activity']]
-        self.__test_x = self.__test_x.drop('activity', axis=1)
+    def split_data(self):
+        self.__train_y = self.__data[['activity']]
+        self.__train_x = self.__data.drop('activity', axis=1)
 
     def select_models(self, models):
         del self.__selected_models[:]
@@ -189,6 +218,12 @@ class HAR:
     def train(self):
         for model in self.__selected_models:
             self.__models[model]["model"].fit(self.__train_x, self.__train_y)
+
+    def predict(self):
+        result = list()
+        for model in self.__selected_models:
+            result.append(self.__models[model]["model"].predict(self.__test_x.drop(_nominal_columns, axis=1)))
+        return result
 
     def test(self, strategy):
         test_result_list = list()
@@ -202,14 +237,10 @@ class HAR:
         return test_result_list
 
 
-def _feature_extraction(data):
+def _feature_extraction(data: pd.DataFrame) -> pd.Series:
     def nlargest_index(df, n):
         return df.nlargest(n).index.unique()[0:n]
 
-    """
-    :param data: pd.DataFrame
-    :return: pd.DataFrame
-    """
     # first 225 statistical features
     statistical = data.min()
     statistical = statistical.append(data.max(), ignore_index=True)
@@ -266,7 +297,7 @@ def main():
     har.shuffle()
     har.normalize()
     # har.dimensionality_reduction(30)
-    har.dimensionality_lda_reduction(19)
+    har.lda(19)
     # har.split_data(0.4)
     har.drop_extra_features()
     models = [
@@ -297,13 +328,22 @@ def main():
         print(np.std(accuracy), end='\n\n')
         classes = ['a{}'.format(i) for i in range(1, 20)]
         print(classes)
-        from gui import plot
-        fig = plot.confusion_matrix(
-            cm,
-            classes=['a{}'.format(i) for i in range(1, 20)],
-            normalize=True)
-        import matplotlib.pyplot as plt
-        plt.show(fig)
+        # from gui import plot
+        # fig = plot.confusion_matrix(
+        #     cm,
+        #     classes=['a{}'.format(i) for i in range(1, 20)],
+        #     normalize=True)
+        # import matplotlib.pyplot as plt
+        # plt.show(fig)
+
+    har.split_data()
+    har.train()
+    har.load_instance()
+    har.normalize(train=False)
+    # har.dimensionality_reduction(30)
+    har.lda(train=False)
+    # har.split_data(0.4)
+    print(har.predict()[0][0])
 
 
 if __name__ == "__main__":

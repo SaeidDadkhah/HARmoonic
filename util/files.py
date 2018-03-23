@@ -15,6 +15,11 @@ def get_file():
             #     break
 
 
+def separate_by_os(path):
+    path = path.replace('/', os.sep)
+    return path.replace('\\', os.sep)
+
+
 def shrink_file_name(file_name, file_name_len):
     if len(file_name) > file_name_len:
         file_name = file_name[0:(2 * file_name_len // 3)] + '...' + file_name[(-file_name_len // 3):]
