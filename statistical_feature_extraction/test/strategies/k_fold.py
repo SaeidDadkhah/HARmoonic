@@ -4,8 +4,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from datetime import datetime
 
-CONFUSION_MATRIX = "confusion_matrix"
-ACCURACY = "accuracy"
+from statistical_feature_extraction.test import constants
 
 
 def k_fold_cv(x, y, model, k):
@@ -25,6 +24,6 @@ def k_fold_cv(x, y, model, k):
         confusion_mat = confusion_mat + confusion_matrix(y_test, predictions)
         accuracy_list.append(accuracy_score(y_test, predictions))
     return {
-        CONFUSION_MATRIX: confusion_mat,
-        ACCURACY: accuracy_list,
+        constants.CONFUSION_MATRIX: confusion_mat,
+        constants.ACCURACY: accuracy_list,
     }

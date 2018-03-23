@@ -18,7 +18,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 
-from statistical_feature_extraction.test import protocol
+from statistical_feature_extraction.test import constants
 from statistical_feature_extraction.test import executor
 
 reload_data = False
@@ -35,31 +35,36 @@ _columns.append('activity')
 
 _nominal_columns = [_columns[-2], _columns[-1]]
 
-
-LOGISTIC_REGRESSION = "LOGISTIC_REGRESSION"
-RANDOM_FOREST = "RANDOM_FOREST"
-SVM = "SVC"
-LINEAR_SVC = "LINEAR_SVC"
-KNN = "KNN"
-GAUSSIAN_NB = "GAUSSIAN_NB"
-MLP = "MLP"
-DECISION_TREE = "DECISION_TREE"
-GAUSSIAN_PROCESS = "GAUSSIAN_PROCESS"
-ADABOOST = "ADABOOST"
-RADIAL_BASIS_FUNCTION = "RADIAL_BASIS_FUNCTION"
+LOGISTIC_REGRESSION = 'Logistic Regression'
+RANDOM_FOREST = 'Random Forest'
+SVM = 'SVM'
+LINEAR_SVM = 'Linear SVM'
+K_NEAREST_NEIGHBORS = 'K Nearest Neighbors'
+NAIVE_BAYES = 'Naive Bayes'
+MULTILAYER_PERCEPTRON = 'Multilayer Perceptron'
+DECISION_TREE = 'Decision Tree'
+GAUSSIAN_PROCESS = 'Gaussian Process'
+ADABOOST = 'AdaBoost'
+RADIAL_BASIS_FUNCTION = 'Gaussian Process with RBF'
 MODELS = {
     LOGISTIC_REGRESSION: 0,
     RANDOM_FOREST: 1,
     SVM: 2,
-    LINEAR_SVC: 3,
-    KNN: 4,
-    GAUSSIAN_NB: 5,
-    MLP: 6,
+    LINEAR_SVM: 3,
+    K_NEAREST_NEIGHBORS: 4,
+    NAIVE_BAYES: 5,
+    MULTILAYER_PERCEPTRON: 6,
     DECISION_TREE: 7,
     GAUSSIAN_PROCESS: 8,
     ADABOOST: 9,
     RADIAL_BASIS_FUNCTION: 10,
 }
+
+TEST_STRATEGIES = [
+    # constants.REPEATED_RANDOM_SUB_SAMPLING,
+    constants.K_FOLD,
+    # constants.LEAVE_ONE_OUT
+]
 
 
 class HAR:
@@ -96,26 +101,34 @@ class HAR:
         self.__test_x = None
         self.__test_y = None
 
-    def load_data(self):
-        root_dir = os.sep.join(['.', 'data', ''])
+    def load_data(self, root_dir=None):
+        if root_dir is None:
+            root_dir = os.sep.join(['.', 'data', ''])
         self.__data = pd.DataFrame()
         for dir_name, subdir_list, file_list in os.walk(root_dir):
             data_list = list()
+            print(dir_name)
             for f in file_list:
                 sensors_data = pd.read_csv(dir_name + os.sep + f, header=None)
                 sensors_data = _feature_extraction(sensors_data)
-                sensors_data.set_value(_feature_vector_size, dir_name.split(os.sep)[3])
-                sensors_data.set_value(_feature_vector_size + 1, dir_name.split(os.sep)[2])
+                sensors_data.set_value(_feature_vector_size, dir_name.split(os.sep)[-1])
+                sensors_data.set_value(_feature_vector_size + 1, dir_name.split(os.sep)[-2])
                 sensors_data = sensors_data.to_frame().T
                 sensors_data.columns = _columns
                 data_list.append(sensors_data)
                 self.__data = self.__data.append(sensors_data)
+                break
+
+        print(self.__data.tail())
 
     def save_pickle(self, path):
         self.__data.to_pickle(path)
 
-    def load_pickle(self, path):
+    def load_pickle(self, path=None):
+        if path is None:
+            path = os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl'])
         self.__data = pd.read_pickle(path)
+        self.__data = self.__data.reset_index(drop=True)
 
     def save_csv(self, path):
         dd = self.__data.reset_index(drop=True)
@@ -169,6 +182,7 @@ class HAR:
     def select_models(self, models):
         del self.__selected_models[:]
         for model in models:
+            model = MODELS[model]
             if model in MODELS.values() and model not in self.__selected_models:
                 self.__selected_models.append(model)
 
@@ -235,6 +249,10 @@ def _feature_extraction(data):
     return feature_vector
 
 
+def set_seed(seed):
+    np.random.seed(seed)
+
+
 def main():
     har = HAR()
     if reload_data:
@@ -242,7 +260,7 @@ def main():
         if save_info:
             har.save_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl']))
     else:
-        har.load_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl']))
+        har.load_pickle()
 
     print('loaded')
     har.shuffle()
@@ -256,27 +274,36 @@ def main():
         # RANDOM_FOREST,
         # SVM,
         # LINEAR_SVC,
-        # KNN,
-        # GAUSSIAN_NB,
+        # K_NEAREST_NEIGHBORS,
+        NAIVE_BAYES,
         # MLP,
         # DECISION_TREE,
-        ADABOOST,
+        # ADABOOST,
         # RADIAL_BASIS_FUNCTION,
     ]
     for model in models:
-        har.select_models(models=[MODELS[model]])
+        har.select_models(models=[model])
         # har.train()
 
-        result_list = har.test(protocol.TEST_STRATEGIES["K_FOLD"])
-        cm = result_list[0][executor.k_fold.CONFUSION_MATRIX]
+        result_list = har.test(constants.K_FOLD)
+        cm = result_list[0][constants.CONFUSION_MATRIX]
         for ii in range(0, 19):
             for jj in range(0, 19):
                 print('{:3d}'.format(int(cm[ii][jj])), end='  ')
             print()
 
-        accuracy = result_list[0][executor.k_fold.ACCURACY]
+        accuracy = result_list[0][constants.ACCURACY]
         print(np.mean(accuracy), end=' ±')
         print(np.std(accuracy), end='\n\n')
+        classes = ['a{}'.format(i) for i in range(1, 20)]
+        print(classes)
+        from gui import plot
+        fig = plot.confusion_matrix(
+            cm,
+            classes=['a{}'.format(i) for i in range(1, 20)],
+            normalize=True)
+        import matplotlib.pyplot as plt
+        plt.show(fig)
 
 
 if __name__ == "__main__":

@@ -13,3 +13,9 @@ def get_file():
             c += 1
             # if c > 5:
             #     break
+
+
+def shrink_file_name(file_name, file_name_len):
+    if len(file_name) > file_name_len:
+        file_name = file_name[0:(2 * file_name_len // 3)] + '...' + file_name[(-file_name_len // 3):]
+    return file_name

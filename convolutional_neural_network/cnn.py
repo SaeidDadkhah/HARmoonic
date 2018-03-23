@@ -3,7 +3,7 @@ import pandas as pd
 import tensorflow as tf
 import datetime
 
-from util.get_files import get_file
+from util.files import get_file
 from convolutional_neural_network import config
 
 
