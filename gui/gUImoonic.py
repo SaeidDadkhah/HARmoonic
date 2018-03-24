@@ -549,6 +549,8 @@ class GUImoonic:
 
     def __predict(self):
         address = filedialog.askopenfilename()
+        if address == '':
+            return
         address = files.separate_by_os(address)
         if address == '':
             address = None
