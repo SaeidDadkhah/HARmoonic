@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import datetime
+import pickle
+import os
 
 from util.files import get_file
-from convolutional_neural_network import config
-
 
 READ_DATA = False
 SAVE_DATA = True
@@ -13,11 +13,32 @@ SAVE_DATA = True
 
 class CNN:
     def __init__(self):
+        # config attributes
+        self.CHECKPOINT_STEP = 2
+
+        self.ACTIVITIES = 19
+
+        self.HEIGHT = 1
+        self.WIDTH = 125
+        self.CHANNEL = 45
+
+        self.BATCH_SIZE = 10
+        self.KERNEL_SIZE = 10
+        self.DEPTH = 15
+        self.NUM_HIDDEN = 1000
+
+        self.LEARNING_RATE = 0.0001
+        self.TRAINING_EPOCHS = 1
+
+        self.TOTAL_BATCHES = 1
+
+        # attributes
         self.__data = None  # type: pd.DataFrame
         self.__activity = None  # type: np.ndarray
         self.__person = None  # type: np.ndarray
         self.__X = None
         self.__Y = None
+        self.__result = None
         self.__loss = None
         self.__optimizer = None
         self.__accuracy = None
@@ -44,6 +65,40 @@ class CNN:
                 if self.__person is not None \
                 else ndf
 
+    def __save_config(self, path):
+        with open(path, 'wb') as output_file:
+            config = {
+                "CHECKPOINT_STEP": self.CHECKPOINT_STEP,
+                "ACTIVITIES": self.ACTIVITIES,
+                "HEIGHT": self.HEIGHT,
+                "WIDTH": self.WIDTH,
+                "CHANNEL": self.CHANNEL,
+                "BATCH_SIZE": self.BATCH_SIZE,
+                "KERNEL_SIZE": self.KERNEL_SIZE,
+                "DEPTH": self.DEPTH,
+                "NUM_HIDDEN": self.NUM_HIDDEN,
+                "LEARNING_RATE": self.LEARNING_RATE,
+                "TRAINING_EPOCHS": self.TRAINING_EPOCHS,
+                "TOTAL_BATCHES": self.TOTAL_BATCHES,
+            }
+            pickle.dump(config, output_file)
+
+    def __load_config(self, path):
+        with open(path, 'rb') as input_file:
+            config = pickle.load(input_file)
+            self.CHECKPOINT_STEP = config["CHECKPOINT_STEP"]
+            self.ACTIVITIES = config["ACTIVITIES"]
+            self.HEIGHT = config["HEIGHT"]
+            self.WIDTH = config["WIDTH"]
+            self.CHANNEL = config["CHANNEL"]
+            self.BATCH_SIZE = config["BATCH_SIZE"]
+            self.KERNEL_SIZE = config["KERNEL_SIZE"]
+            self.DEPTH = config["DEPTH"]
+            self.NUM_HIDDEN = config["NUM_HIDDEN"]
+            self.LEARNING_RATE = config["LEARNING_RATE"]
+            self.TRAINING_EPOCHS = config["TRAINING_EPOCHS"]
+            self.TOTAL_BATCHES = config["TOTAL_BATCHES"]
+
     def save_data(self, path):
         np.save(path + 'data.npy', self.__data)
         np.save(path + 'person.npy', self.__person)
@@ -63,11 +118,19 @@ class CNN:
         self.__test_x = self.__data[~train_test_split]
         self.__test_y = dummies[~train_test_split]
 
-    def build_model(self):
+    def __build_model(self, config=None):
+        if config is not None:
+            try:
+                self.__load_config(config)
+            except FileNotFoundError:
+                self.__save_config(config)
+
+        # noinspection PyShadowingNames
         def __weight_variable(shape):
             initial = tf.truncated_normal(shape, stddev=0.1)
             return tf.Variable(initial)
 
+        # noinspection PyShadowingNames
         def __bias_variable(shape):
             initial = tf.constant(0.0, shape=shape)
             return tf.Variable(initial)
@@ -86,91 +149,106 @@ class CNN:
                                   strides=[1, 1, stride_size, 1],
                                   padding='VALID')
 
-        config.TOTAL_BATCHES = self.__train_x.shape[0] // config.BATCH_SIZE
+        try:
+            self.TOTAL_BATCHES = self.__train_x.shape[0] // self.BATCH_SIZE
+        except AttributeError:
+            pass
 
         self.__X = tf.placeholder(tf.float32,
                                   shape=[None,
-                                         config.HEIGHT,
-                                         config.WIDTH,
-                                         config.CHANNEL])
+                                         self.HEIGHT,
+                                         self.WIDTH,
+                                         self.CHANNEL])
         self.__Y = tf.placeholder(tf.float32,
-                                  shape=[None, config.ACTIVITIES])
+                                  shape=[None, self.ACTIVITIES])
         c = __apply_depthwise_conv(self.__X,
-                                   config.KERNEL_SIZE,
-                                   config.CHANNEL,
-                                   config.DEPTH)
+                                   self.KERNEL_SIZE,
+                                   self.CHANNEL,
+                                   self.DEPTH)
         p = __apply_max_pool(c, 20, 2)
         c = __apply_depthwise_conv(p,
                                    6,
-                                   config.DEPTH * config.CHANNEL,
-                                   config.DEPTH // 10)
+                                   self.DEPTH * self.CHANNEL,
+                                   self.DEPTH // 10)
 
         shape = c.get_shape().as_list()
         c_flat = tf.reshape(c, [-1, shape[1] * shape[2] * shape[3]])
 
         f_weights_l1 = __weight_variable([shape[1] *
                                           shape[2] *
-                                          config.DEPTH *
-                                          config.CHANNEL *
-                                          (config.DEPTH // 10),
-                                          config.NUM_HIDDEN])
-        f_biases_l1 = __bias_variable([config.NUM_HIDDEN])
+                                          self.DEPTH *
+                                          self.CHANNEL *
+                                          (self.DEPTH // 10),
+                                          self.NUM_HIDDEN])
+        f_biases_l1 = __bias_variable([self.NUM_HIDDEN])
         f = tf.nn.tanh(tf.add(tf.matmul(c_flat,
                                         f_weights_l1),
                               f_biases_l1))
 
-        out_weights = __weight_variable([config.NUM_HIDDEN,
-                                         config.ACTIVITIES])
-        out_biases = __bias_variable([config.ACTIVITIES])
+        out_weights = __weight_variable([self.NUM_HIDDEN,
+                                         self.ACTIVITIES])
+        out_biases = __bias_variable([self.ACTIVITIES])
         y_ = tf.nn.softmax(tf.matmul(f, out_weights) + out_biases)
-
+        self.__result = tf.add(tf.argmax(y_, axis=1), 1, name='result')
         self.__loss = -tf.reduce_sum(self.__Y * tf.log(y_))
-        self.__optimizer = tf\
-            .train\
-            .GradientDescentOptimizer(learning_rate=config.LEARNING_RATE)\
+        self.__optimizer = tf \
+            .train \
+            .GradientDescentOptimizer(learning_rate=self.LEARNING_RATE) \
             .minimize(self.__loss)
 
         correct_prediction = tf.equal(tf.argmax(y_, 1), tf.argmax(self.__Y, 1))
         self.__accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    def run(self):
+    def run(self, path=None):
+        if path is None:
+            path = os.sep.join(['.', 'convolutional_neural_network', 'model_{}.ckpt'])
+        self.__build_model(config=path.format('config') + '.pkl')
+
+        training_accuracy = list()
+        testing_accuracy = list()
         with tf.Session() as session:
             cost_history = np.empty(shape=[1], dtype=float)
             tf.global_variables_initializer().run()
             print('{}: '.format(datetime.datetime.now()))
-            for epoch in range(config.TRAINING_EPOCHS):
-                for b in range(config.TOTAL_BATCHES):
-                    offset = (b * config.BATCH_SIZE) %\
-                             (self.__train_y.shape[0] - config.BATCH_SIZE)
-                    batch_x = self.__train_x[offset:(offset + config.BATCH_SIZE), :, :, :]
-                    batch_y = self.__train_y[offset:(offset + config.BATCH_SIZE), :]
+            for epoch in range(self.TRAINING_EPOCHS):
+                for b in range(self.TOTAL_BATCHES):
+                    offset = (b * self.BATCH_SIZE) % \
+                             (self.__train_y.shape[0] - self.BATCH_SIZE)
+                    batch_x = self.__train_x[offset:(offset + self.BATCH_SIZE), :, :, :]
+                    batch_y = self.__train_y[offset:(offset + self.BATCH_SIZE), :]
                     _, c = session.run([self.__optimizer,
                                         self.__loss],
                                        feed_dict={self.__X: batch_x,
                                                   self.__Y: batch_y})
                     cost_history = np.append(cost_history, c)
-                    # print("Epoch:",
-                    #       epoch + 1,
-                    #       " Training Loss:",
-                    #       c,
-                    #       " Training Accuracy:",
-                    #       session.run(self.__accuracy,
-                    #                   feed_dict={self.__X: self.__train_x,
-                    #                              self.__Y: self.__train_y}),
-                    #       " Testing Accuracy:",
-                    #       session.run(self.__accuracy,
-                    #                   feed_dict={self.__X: self.__test_x,
-                    #                              self.__Y: self.__test_x})
-                    #       )
                 print('{}. {}: '.format((epoch + 1), datetime.datetime.now()), end='')
-                print("Training Accuracy:",
-                      session.run(self.__accuracy,
-                                  feed_dict={self.__X: self.__train_x,
-                                             self.__Y: self.__train_y}), end=' ')
-                print("Testing Accuracy:",
-                      session.run(self.__accuracy,
-                                  feed_dict={self.__X: self.__test_x,
-                                             self.__Y: self.__test_y}))
+                training_accuracy.append(session.run(self.__accuracy,
+                                                     feed_dict={self.__X: self.__train_x,
+                                                                self.__Y: self.__train_y}))
+                print("Training Accuracy:", training_accuracy[-1], end=' ')
+                testing_accuracy.append(session.run(self.__accuracy,
+                                                    feed_dict={self.__X: self.__test_x,
+                                                               self.__Y: self.__test_y}))
+                print("Testing Accuracy:", testing_accuracy[-1])
+                if epoch % self.CHECKPOINT_STEP == 0:
+                    saver = tf.train.Saver()
+                    saver.save(session, path.format(epoch))
+            saver = tf.train.Saver()
+            saver.save(session, path.format('final'))
+
+    def predict(self, model=None, path=None):
+        if model is None:
+            model = os.sep.join(['.', 'convolutional_neural_network', 'model_{}.ckpt'])
+        if path is None:
+            path = './data/a01/p1/s01.txt'
+
+        self.__build_model(config=model.format('config') + '.pkl')
+
+        ndf = pd.read_csv(path, header=None).values.reshape(1, 1, 125, 45)  # type: np.ndarray
+        with tf.Session() as session:
+            saver = tf.train.Saver()
+            saver.restore(session, model.format('final'))
+            return session.run(self.__result, {self.__X: ndf})
 
 
 def cnn_model_fn(features, labels, mode):
@@ -270,7 +348,7 @@ def new_cnn_main():
         model_dir='/tmp/har_convnet_model'
     )
 
-    tensors_to_log = {"probabilites": "softmax_tensor"}
+    tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=50
     )
@@ -299,19 +377,20 @@ def new_cnn_main():
 
 
 def old_main():
+    train = False
+    predict = True
     cnn = CNN()
-    if READ_DATA:
-        cnn.read_data()
-        print('read')
-        if SAVE_DATA:
-            cnn.save_data('./convolutional_neural_network/')
-            print('save')
-    else:
-        cnn.load_data('./convolutional_neural_network/')
-        print('load')
-    cnn.split_data()
-    cnn.build_model()
-    cnn.run()
-
-    print(1)
-
+    if train:
+        if READ_DATA:
+            cnn.read_data()
+            print('read')
+            if SAVE_DATA:
+                cnn.save_data('./convolutional_neural_network/')
+                print('save')
+        else:
+            cnn.load_data('./convolutional_neural_network/')
+            print('load')
+        cnn.split_data()
+        cnn.run()
+    if predict:
+        print(cnn.predict())

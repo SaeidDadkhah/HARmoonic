@@ -2,7 +2,7 @@ import os
 
 
 def get_file():
-    root_dir = './data/'
+    root_dir = os.sep.join(['.', 'data', ''])
     for dir_name, subdir_list, file_list in os.walk(root_dir):
         print(dir_name.split(os.sep))
         c = 0
