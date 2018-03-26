@@ -1,6 +1,6 @@
-import tkinter.filedialog as filedialog
-from tkinter import *
+from tkinter import filedialog
 from tkinter import ttk
+from tkinter import *
 from PIL import ImageTk
 from PIL import Image
 
@@ -717,11 +717,13 @@ class GUImoonic:
         if model_address is not None:
             model_address = model_address + 'model_{}.ckpt'
 
-        checkpoints = files.get_checkpoints_list(model_address[:-13])
-        if len(checkpoints) > 0:
-            self.__cnn.run(path=model_address, last_checkpoint=checkpoints[-1])
+            checkpoints = files.get_checkpoints_list(model_address[:-13])
+            if len(checkpoints) > 0:
+                self.__cnn.run(path=model_address, last_checkpoint=checkpoints[-1])
+            else:
+                self.__cnn.run(path=model_address)
         else:
-            self.__cnn.run(path=model_address)
+            self.__cnn.run()
         self.__current_result = (self.__cnn.training_accuracy, self.__cnn.testing_accuracy)
         self.__show_accuracy_cnn()
 
@@ -740,5 +742,6 @@ class GUImoonic:
         model_address = None
         if self.__current_model_address is not None:
             model_address = self.__current_model_address + 'model_{}.ckpt'
-        result = CNN().predict(model=model_address, path=address)[0]
+        checkpoints = files.get_checkpoints_list(model_address[:-13])
+        result = CNN().predict(model=model_address, path=address, last_checkpoint=checkpoints[-1])[0]
         self.__set_image(image_class['a{:02}'.format(result)])

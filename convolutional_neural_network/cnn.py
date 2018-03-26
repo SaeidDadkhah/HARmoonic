@@ -7,9 +7,6 @@ import os
 
 from util.files import get_file
 
-READ_DATA = False
-SAVE_DATA = True
-
 
 class CNN:
     def __init__(self, config_address=None):
@@ -59,9 +56,7 @@ class CNN:
         self.__test_x = None
         self.__test_y = None
 
-    def read_data(self, root_dir=None):
-        if root_dir is None:
-            root_dir = os.sep.join(['.', 'data', ''])
+    def read_data(self, root_dir=os.sep.join(['.', 'data', ''])):
         self.__activity = None
         for f, p, a in get_file(root_dir):
             ndf = pd.read_csv(f, header=None).values.reshape(1, 1, 125, 45)  # type: np.ndarray
@@ -119,16 +114,12 @@ class CNN:
             self.TRAINING_EPOCHS = config["TRAINING_EPOCHS"]
             self.TOTAL_BATCHES = config["TOTAL_BATCHES"]
 
-    def save_data(self, path):
-        if path is None:
-            path = os.sep.join(['.', 'convolutional_neural_network', ''])
+    def save_data(self, path=os.sep.join(['.', 'convolutional_neural_network', ''])):
         np.save(path + 'data.npy', self.__data)
         np.save(path + 'person.npy', self.__person)
         np.save(path + 'activity.npy', self.__activity)
 
-    def load_data(self, path):
-        if path is None:
-            path = os.sep.join(['.', 'convolutional_neural_network', ''])
+    def load_data(self, path=os.sep.join(['.', 'convolutional_neural_network', ''])):
         self.__data = np.load(path + 'data.npy')
         self.__person = np.load(path + 'person.npy')
         self.__activity = np.load(path + 'activity.npy')
@@ -219,9 +210,9 @@ class CNN:
         correct_prediction = tf.equal(tf.argmax(y_, 1), tf.argmax(self.__Y, 1))
         self.__accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    def run(self, path=None, last_checkpoint=None):
-        if path is None:
-            path = os.sep.join(['.', 'convolutional_neural_network', 'model_{}.ckpt'])
+    def run(self,
+            path=os.sep.join(['.', 'convolutional_neural_network', 'model_{}.ckpt']),
+            last_checkpoint=None):
         config_address = path.format('config') + '.pkl'
         try:
             self.__load_config(config_address)
@@ -272,12 +263,11 @@ class CNN:
             saver.save(session, path.format('final'))
             self.__save_config(config_address)
 
-    def predict(self, model=None, path=None):
+    def predict(self,
+                model=os.sep.join(['.', 'convolutional_neural_network', 'model_{}.ckpt']),
+                path=os.sep.join(['.', 'data', 'a01', 'p1', 's01.txt']),
+                last_checkpoint='final'):
         print(model, path)
-        if model is None:
-            model = os.sep.join(['.', 'convolutional_neural_network', 'model_{}.ckpt'])
-        if path is None:
-            path = './data/a01/p1/s01.txt'
 
         config_address = model.format('config') + '.pkl'
         self.__load_config(config_address)
@@ -287,7 +277,7 @@ class CNN:
         ndf = pd.read_csv(path, header=None).values.reshape(1, 1, 125, 45)  # type: np.ndarray
         with tf.Session() as session:
             saver = tf.train.Saver()
-            saver.restore(session, model.format('final'))
+            saver.restore(session, model.format(last_checkpoint))
             return session.run(self.__result, {self.__X: ndf})
 
 
@@ -417,20 +407,22 @@ def new_cnn_main():
 
 
 def old_main():
+    read_data = False
+    save_data = True
     train = True
     predict = True
     cnn = CNN()
     if train:
-        if READ_DATA:
+        if read_data:
             cnn.read_data()
             print('read')
-            if SAVE_DATA:
+            if save_data:
                 cnn.save_data('./convolutional_neural_network/')
                 print('save')
         else:
             cnn.load_data('./convolutional_neural_network/')
             print('load')
         cnn.split_data()
-        cnn.run()
+        cnn.run(path='./cnn_test/model_{}.ckpt')
     if predict:
         print(cnn.predict())
