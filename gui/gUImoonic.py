@@ -54,6 +54,8 @@ model = 'Model'
 model_parameter = 'Model Parameter'
 test_strategy = 'Test Strategy'
 test_parameter = 'Test Parameter'
+data_address = 'Data Address'
+saved_model_address = 'Model Address'
 
 # Combobox Values
 statistical = 'Statistical'
@@ -155,7 +157,7 @@ class GUImoonic:
         self.label_plot.bind('<Configure>', lambda event: self.__resize_callback())
 
         # Method
-        self.label_method = Label(frame_control, text=method + ':', anchor=W, bg='red')
+        self.label_method = Label(frame_control, text=method + ':', anchor=W)
         self.label_method.place(width=control_component_width,
                                 height=control_component_height,
                                 x=margin // 2,
@@ -170,7 +172,7 @@ class GUImoonic:
                                    y=control_component_height)
 
         # Control Frame
-        self.frame_statistical = Frame(frame_control, bg='green')
+        self.frame_statistical = Frame(frame_control)
         self.frame_statistical.place(width=0,
                                      height=-control_component_all_height,
                                      relwidth=0,
@@ -178,7 +180,7 @@ class GUImoonic:
                                      x=0,
                                      y=control_component_all_height)
 
-        self.frame_cnn = Frame(frame_control, bg='blue')
+        self.frame_cnn = Frame(frame_control)
         self.frame_cnn.place(width=0,
                              height=-control_component_all_height,
                              relwidth=0,
@@ -188,7 +190,7 @@ class GUImoonic:
 
         # Statistical Method Frame
         # Input Data Type
-        self.label_data_type_sfe = Label(self.frame_statistical, text=input_data_type + ':', anchor=W, bg='red')
+        self.label_data_type_sfe = Label(self.frame_statistical, text=input_data_type + ':', anchor=W)
         self.label_data_type_sfe.place(width=control_component_width - control_address_width_acc,
                                        height=control_component_height,
                                        x=margin // 2,
@@ -202,7 +204,7 @@ class GUImoonic:
                                           y=control_component_height)
 
         # Load Address
-        self.label_load_address_sfe = Label(self.frame_statistical, text=load_address + ':', anchor=W, bg='red')
+        self.label_load_address_sfe = Label(self.frame_statistical, text=load_address + ':', anchor=W)
         self.label_load_address_sfe.place(width=control_parameter_width - 60,
                                           height=control_component_height,
                                           x=3 * margin // 2 + control_component_width - control_address_width_acc,
@@ -218,14 +220,14 @@ class GUImoonic:
                                            height=control_component_height,
                                            x=x,
                                            y=0)
-        self.label_current_load_address_sfe = Label(self.frame_statistical, text="No file/folder", anchor=W, bg='red')
+        self.label_current_load_address_sfe = Label(self.frame_statistical, text="No file/folder", anchor=W)
         self.label_current_load_address_sfe.place(width=control_parameter_width + 100,
                                                   height=control_component_height,
                                                   x=2 * margin + control_component_width - control_address_width_acc,
                                                   y=control_component_height)
 
         # Save Data
-        self.label_save_data = Label(self.frame_statistical, text=save_data + ':', anchor=W, bg='red')
+        self.label_save_data = Label(self.frame_statistical, text=save_data + ':', anchor=W)
         self.label_save_data.place(width=control_component_width - control_address_width_acc,
                                    height=control_component_height,
                                    x=margin // 2,
@@ -239,7 +241,7 @@ class GUImoonic:
                                       y=control_component_all_height + control_component_height)
 
         # Save Address
-        self.label_save_address = Label(self.frame_statistical, text=save_address + ':', anchor=W, bg='red')
+        self.label_save_address = Label(self.frame_statistical, text=save_address + ':', anchor=W)
         self.label_save_address.place(width=control_parameter_width - 60,
                                       height=control_component_height,
                                       x=3 * margin // 2 + control_component_width - control_address_width_acc,
@@ -255,14 +257,14 @@ class GUImoonic:
                                        height=control_component_height,
                                        x=x,
                                        y=control_component_all_height)
-        self.label_current_save_address = Label(self.frame_statistical, text="No file", anchor=W, bg='red')
+        self.label_current_save_address = Label(self.frame_statistical, text="No file", anchor=W)
         self.label_current_save_address.place(width=control_parameter_width + 100,
                                               height=control_component_height,
                                               x=2 * margin + control_component_width - control_address_width_acc,
                                               y=control_component_all_height + control_component_height)
 
         # Normalize
-        self.label_normalize = Label(self.frame_statistical, text=normalize + ':', anchor=W, bg='red')
+        self.label_normalize = Label(self.frame_statistical, text=normalize + ':', anchor=W)
         self.label_normalize.place(width=control_component_width,
                                    height=control_component_height,
                                    x=margin // 2,
@@ -276,7 +278,7 @@ class GUImoonic:
                                       y=2 * control_component_all_height + control_component_height)
 
         # Shuffle
-        self.label_shuffle = Label(self.frame_statistical, text=shuffle + ':', anchor=W, bg='red')
+        self.label_shuffle = Label(self.frame_statistical, text=shuffle + ':', anchor=W)
         self.label_shuffle.place(width=control_component_width,
                                  height=control_component_height,
                                  x=margin // 2,
@@ -290,7 +292,7 @@ class GUImoonic:
                                     y=3 * control_component_all_height + control_component_height)
 
         # Seed
-        self.label_seed = Label(self.frame_statistical, text=seed + ':', anchor=W, bg='red')
+        self.label_seed = Label(self.frame_statistical, text=seed + ':', anchor=W)
         self.label_seed.place(width=control_parameter_width,
                               height=control_component_height,
                               x=3 * margin // 2 + control_component_width,
@@ -304,8 +306,7 @@ class GUImoonic:
         # Dimensionality Reduction
         self.label_dimensionality_reduction = Label(self.frame_statistical,
                                                     text=dimensionality_reduction + ':',
-                                                    anchor=W,
-                                                    bg='red')
+                                                    anchor=W)
         self.label_dimensionality_reduction.place(width=control_component_width,
                                                   height=control_component_height,
                                                   x=margin // 2,
@@ -320,7 +321,7 @@ class GUImoonic:
                                                      y=4 * control_component_all_height + control_component_height)
 
         # Dimensions
-        self.label_dimensions = Label(self.frame_statistical, text=dimensions + ':', anchor=W, bg='red')
+        self.label_dimensions = Label(self.frame_statistical, text=dimensions + ':', anchor=W)
         self.label_dimensions.place(width=control_parameter_width,
                                     height=control_component_height,
                                     x=3 * margin // 2 + control_component_width,
@@ -332,7 +333,7 @@ class GUImoonic:
                                     y=4 * control_component_all_height + control_component_height)
 
         # Model
-        self.label_model = Label(self.frame_statistical, text=model + ':', anchor=W, bg='red')
+        self.label_model = Label(self.frame_statistical, text=model + ':', anchor=W)
         self.label_model.place(width=control_component_width,
                                height=control_component_height,
                                x=margin // 2,
@@ -346,7 +347,7 @@ class GUImoonic:
                                   y=5 * control_component_all_height + control_component_height)
 
         # Model Parameter
-        self.label_model_parameter = Label(self.frame_statistical, text="Model Parameter:", anchor=W, bg='red')
+        self.label_model_parameter = Label(self.frame_statistical, text="Model Parameter:", anchor=W)
         self.label_model_parameter.place(width=control_parameter_width,
                                          height=control_component_height,
                                          x=3 * margin // 2 + control_component_width,
@@ -358,7 +359,7 @@ class GUImoonic:
                                          y=5 * control_component_all_height + control_component_height)
 
         # Test Method
-        self.label_test_method = Label(self.frame_statistical, text=test_strategy + ':', anchor=W, bg='red')
+        self.label_test_method = Label(self.frame_statistical, text=test_strategy + ':', anchor=W)
         self.label_test_method.place(width=control_component_width,
                                      height=control_component_height,
                                      x=margin // 2,
@@ -372,7 +373,7 @@ class GUImoonic:
                                           y=6 * control_component_all_height + control_component_height)
 
         # Test Parameter
-        self.label_test_parameter = Label(self.frame_statistical, text=test_parameter + ':', anchor=W, bg='red')
+        self.label_test_parameter = Label(self.frame_statistical, text=test_parameter + ':', anchor=W)
         self.label_test_parameter.place(width=control_parameter_width,
                                         height=control_component_height,
                                         x=3 * margin // 2 + control_component_width,
@@ -418,7 +419,7 @@ class GUImoonic:
 
         # Convolutional Neural Network Method Frame
         # Input Data Type
-        self.label_data_type_cnn = Label(self.frame_cnn, text=input_data_type + ':', anchor=W, bg='red')
+        self.label_data_type_cnn = Label(self.frame_cnn, text=input_data_type + ':', anchor=W)
         self.label_data_type_cnn.place(width=control_component_width - control_address_width_acc,
                                        height=control_component_height,
                                        x=margin // 2,
@@ -432,7 +433,7 @@ class GUImoonic:
                                           y=control_component_height)
 
         # Load Address
-        self.label_load_address_cnn = Label(self.frame_cnn, text=load_address + ':', anchor=W, bg='red')
+        self.label_load_address_cnn = Label(self.frame_cnn, text=data_address + ':', anchor=W)
         self.label_load_address_cnn.place(width=control_parameter_width - 60,
                                           height=control_component_height,
                                           x=3 * margin // 2 + control_component_width - control_address_width_acc,
@@ -448,14 +449,14 @@ class GUImoonic:
                                            height=control_component_height,
                                            x=x,
                                            y=0)
-        self.label_current_load_address_cnn = Label(self.frame_cnn, text="No folder", anchor=W, bg='red')
+        self.label_current_load_address_cnn = Label(self.frame_cnn, text="No folder", anchor=W)
         self.label_current_load_address_cnn.place(width=control_parameter_width + 100,
                                                   height=control_component_height,
                                                   x=2 * margin + control_component_width - control_address_width_acc,
                                                   y=control_component_height)
 
         # Model Address
-        self.label_model_address = Label(self.frame_cnn, text=save_address + ':', anchor=W, bg='red')
+        self.label_model_address = Label(self.frame_cnn, text=saved_model_address + ':', anchor=W)
         self.label_model_address.place(width=control_parameter_width - 60,
                                        height=control_component_height,
                                        x=margin // 2,
@@ -467,7 +468,7 @@ class GUImoonic:
                                         height=control_component_height,
                                         x=margin // 2 + control_parameter_width - 55,
                                         y=control_component_all_height)
-        self.label_current_model_address = Label(self.frame_cnn, text="No folder", anchor=W, bg='red')
+        self.label_current_model_address = Label(self.frame_cnn, text="No folder", anchor=W)
         self.label_current_model_address.place(width=-3 * margin // 2,
                                                height=control_component_height,
                                                relwidth=1,
