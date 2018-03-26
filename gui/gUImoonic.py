@@ -4,6 +4,7 @@ from tkinter import ttk
 from PIL import ImageTk
 from PIL import Image
 
+from convolutional_neural_network.cnn import CNN
 from statistical_feature_extraction import test
 from statistical_feature_extraction import sfe
 from util import files
@@ -98,7 +99,8 @@ control_component_all_height = 2 * control_component_height + margin
 control_address_width_acc = 100
 
 frame_control_width = 6 * margin // 2 + control_component_width + control_parameter_width
-button_width = (frame_control_width - 5 * margin) // 4
+button_width_sfe = (frame_control_width - 5 * margin) // 4
+button_width_cnn = (frame_control_width - 4 * margin) // 3
 
 
 class GUImoonic:
@@ -106,9 +108,12 @@ class GUImoonic:
         self.__state = dict()
         self.__current_load_address = None
         self.__current_save_address = None
+        self.__current_data_address = None
+        self.__current_model_address = None
         self.__current_result = None
         self.__current_image = None
         self.__har = sfe.HAR()
+        self.__cnn = CNN()
 
         # Making root window
         self.root = Tk()
@@ -157,75 +162,89 @@ class GUImoonic:
                                 y=0)
         self.combobox_method = ttk.Combobox(frame_control, state='readonly')
         self.combobox_method['values'] = METHODS
-        self.combobox_method.current(0)
-        self.combobox_method.bind('<<ComboboxSelected>>', lambda: self.__select_method())
+        self.combobox_method.current(1)
+        self.combobox_method.bind('<<ComboboxSelected>>', lambda event: self.__select_method())
         self.combobox_method.place(width=control_component_width,
                                    height=control_component_height,
                                    x=margin,
                                    y=control_component_height)
 
+        # Control Frame
+        self.frame_statistical = Frame(frame_control, bg='green')
+        self.frame_statistical.place(width=0,
+                                     height=-control_component_all_height,
+                                     relwidth=0,
+                                     relheight=0,
+                                     x=0,
+                                     y=control_component_all_height)
+
+        self.frame_cnn = Frame(frame_control, bg='blue')
+        self.frame_cnn.place(width=0,
+                             height=-control_component_all_height,
+                             relwidth=0,
+                             relheight=0,
+                             x=0,
+                             y=control_component_all_height)
+
+        # Statistical Method Frame
         # Input Data Type
-        self.label_data_type = Label(frame_control, text=input_data_type + ':', anchor=W, bg='red')
-        self.label_data_type.place(width=control_component_width - control_address_width_acc,
-                                   height=control_component_height,
-                                   x=margin // 2,
-                                   y=control_component_all_height)
-        self.combobox_data_type = ttk.Combobox(frame_control, state='readonly')
-        self.combobox_data_type['values'] = DATA_TYPE
-        self.combobox_data_type.current(1)
-        self.combobox_data_type.place(width=control_component_width - control_address_width_acc,
-                                      height=control_component_height,
-                                      x=margin,
-                                      y=control_component_all_height + control_component_height)
+        self.label_data_type_sfe = Label(self.frame_statistical, text=input_data_type + ':', anchor=W, bg='red')
+        self.label_data_type_sfe.place(width=control_component_width - control_address_width_acc,
+                                       height=control_component_height,
+                                       x=margin // 2,
+                                       y=0)
+        self.combobox_data_type_sfe = ttk.Combobox(self.frame_statistical, state='readonly')
+        self.combobox_data_type_sfe['values'] = DATA_TYPE
+        self.combobox_data_type_sfe.current(1)
+        self.combobox_data_type_sfe.place(width=control_component_width - control_address_width_acc,
+                                          height=control_component_height,
+                                          x=margin,
+                                          y=control_component_height)
 
         # Load Address
-        self.label_load_address = Label(frame_control, text=load_address + ':', anchor=W, bg='red')
-        x = 3 * margin // 2 + control_component_width - control_address_width_acc
-        self.label_load_address.place(width=control_parameter_width - 60,
-                                      height=control_component_height,
-                                      x=x,
-                                      y=control_component_all_height)
-        self.button_load_address = Button(frame_control,
-                                          text='Browse...',
-                                          command=lambda: self.__browse_load_address())
+        self.label_load_address_sfe = Label(self.frame_statistical, text=load_address + ':', anchor=W, bg='red')
+        self.label_load_address_sfe.place(width=control_parameter_width - 60,
+                                          height=control_component_height,
+                                          x=3 * margin // 2 + control_component_width - control_address_width_acc,
+                                          y=0)
+        self.button_load_address_sfe = Button(self.frame_statistical,
+                                              text='Browse...',
+                                              command=lambda: self.__browse_load_address())
         x = 3 * margin // 2 \
             + control_component_width \
             + control_parameter_width \
             - control_address_width_acc - 55
-        self.button_load_address.place(width=55,
-                                       height=control_component_height,
-                                       x=x,
-                                       y=control_component_all_height)
-        self.label_current_load_address = Label(frame_control, text="No file/folder", anchor=W, bg='red')
-        x = 2 * margin + control_component_width - control_address_width_acc
-        y = control_component_all_height + control_component_height
-        self.label_current_load_address.place(width=control_parameter_width + 100,
-                                              height=control_component_height,
-                                              x=x,
-                                              y=y)
+        self.button_load_address_sfe.place(width=55,
+                                           height=control_component_height,
+                                           x=x,
+                                           y=0)
+        self.label_current_load_address_sfe = Label(self.frame_statistical, text="No file/folder", anchor=W, bg='red')
+        self.label_current_load_address_sfe.place(width=control_parameter_width + 100,
+                                                  height=control_component_height,
+                                                  x=2 * margin + control_component_width - control_address_width_acc,
+                                                  y=control_component_height)
 
         # Save Data
-        self.label_save_data = Label(frame_control, text=save_data + ':', anchor=W, bg='red')
+        self.label_save_data = Label(self.frame_statistical, text=save_data + ':', anchor=W, bg='red')
         self.label_save_data.place(width=control_component_width - control_address_width_acc,
                                    height=control_component_height,
                                    x=margin // 2,
-                                   y=2 * control_component_all_height)
-        self.combobox_save_data = ttk.Combobox(frame_control, state='readonly')
+                                   y=control_component_all_height)
+        self.combobox_save_data = ttk.Combobox(self.frame_statistical, state='readonly')
         self.combobox_save_data['values'] = YES_NO
         self.combobox_save_data.current(1)
         self.combobox_save_data.place(width=control_component_width - control_address_width_acc,
                                       height=control_component_height,
                                       x=margin,
-                                      y=2 * control_component_all_height + control_component_height)
+                                      y=control_component_all_height + control_component_height)
 
         # Save Address
-        self.label_save_address = Label(frame_control, text=save_address + ':', anchor=W, bg='red')
-        x = 3 * margin // 2 + control_component_width - control_address_width_acc
+        self.label_save_address = Label(self.frame_statistical, text=save_address + ':', anchor=W, bg='red')
         self.label_save_address.place(width=control_parameter_width - 60,
                                       height=control_component_height,
-                                      x=x,
-                                      y=2 * control_component_all_height)
-        self.button_save_address = Button(frame_control,
+                                      x=3 * margin // 2 + control_component_width - control_address_width_acc,
+                                      y=control_component_all_height)
+        self.button_save_address = Button(self.frame_statistical,
                                           text='Browse...',
                                           command=lambda: self.__browse_save_address())
         x = 3 * margin // 2 \
@@ -235,174 +254,253 @@ class GUImoonic:
         self.button_save_address.place(width=55,
                                        height=control_component_height,
                                        x=x,
-                                       y=2 * control_component_all_height)
-        self.label_current_save_address = Label(frame_control, text="No file", anchor=W, bg='red')
-        x = 2 * margin + control_component_width - control_address_width_acc
-        y = 2 * control_component_all_height + control_component_height
+                                       y=control_component_all_height)
+        self.label_current_save_address = Label(self.frame_statistical, text="No file", anchor=W, bg='red')
         self.label_current_save_address.place(width=control_parameter_width + 100,
                                               height=control_component_height,
-                                              x=x,
-                                              y=y)
+                                              x=2 * margin + control_component_width - control_address_width_acc,
+                                              y=control_component_all_height + control_component_height)
 
         # Normalize
-        self.label_normalize = Label(frame_control, text=normalize + ':', anchor=W, bg='red')
+        self.label_normalize = Label(self.frame_statistical, text=normalize + ':', anchor=W, bg='red')
         self.label_normalize.place(width=control_component_width,
                                    height=control_component_height,
                                    x=margin // 2,
-                                   y=3 * control_component_all_height)
-        self.combobox_normalize = ttk.Combobox(frame_control, state='readonly')
+                                   y=2 * control_component_all_height)
+        self.combobox_normalize = ttk.Combobox(self.frame_statistical, state='readonly')
         self.combobox_normalize['values'] = YES_NO
         self.combobox_normalize.current(0)
         self.combobox_normalize.place(width=control_component_width,
                                       height=control_component_height,
                                       x=margin,
-                                      y=3 * control_component_all_height + control_component_height)
+                                      y=2 * control_component_all_height + control_component_height)
 
         # Shuffle
-        self.label_shuffle = Label(frame_control, text=shuffle + ':', anchor=W, bg='red')
+        self.label_shuffle = Label(self.frame_statistical, text=shuffle + ':', anchor=W, bg='red')
         self.label_shuffle.place(width=control_component_width,
                                  height=control_component_height,
                                  x=margin // 2,
-                                 y=4 * control_component_all_height)
-        self.combobox_shuffle = ttk.Combobox(frame_control, state='readonly')
+                                 y=3 * control_component_all_height)
+        self.combobox_shuffle = ttk.Combobox(self.frame_statistical, state='readonly')
         self.combobox_shuffle['values'] = YES_NO
         self.combobox_shuffle.current(0)
         self.combobox_shuffle.place(width=control_component_width,
                                     height=control_component_height,
                                     x=margin,
-                                    y=4 * control_component_all_height + control_component_height)
+                                    y=3 * control_component_all_height + control_component_height)
 
         # Seed
-        self.label_seed = Label(frame_control, text=seed + ':', anchor=W, bg='red')
+        self.label_seed = Label(self.frame_statistical, text=seed + ':', anchor=W, bg='red')
         self.label_seed.place(width=control_parameter_width,
                               height=control_component_height,
                               x=3 * margin // 2 + control_component_width,
-                              y=4 * control_component_all_height)
-        self.entry_seed = Entry(frame_control)
+                              y=3 * control_component_all_height)
+        self.entry_seed = Entry(self.frame_statistical)
         self.entry_seed.place(width=control_parameter_width,
                               height=control_component_height,
                               x=2 * margin + control_component_width,
-                              y=4 * control_component_all_height + control_component_height)
+                              y=3 * control_component_all_height + control_component_height)
 
         # Dimensionality Reduction
-        self.label_dimensionality_reduction = Label(frame_control,
+        self.label_dimensionality_reduction = Label(self.frame_statistical,
                                                     text=dimensionality_reduction + ':',
                                                     anchor=W,
                                                     bg='red')
         self.label_dimensionality_reduction.place(width=control_component_width,
                                                   height=control_component_height,
                                                   x=margin // 2,
-                                                  y=5 * control_component_all_height)
-        self.combobox_dimensionality_reduction = ttk.Combobox(frame_control,
+                                                  y=4 * control_component_all_height)
+        self.combobox_dimensionality_reduction = ttk.Combobox(self.frame_statistical,
                                                               state='readonly')
         self.combobox_dimensionality_reduction['values'] = DIMENSIONALITY_REDUCTION
         self.combobox_dimensionality_reduction.current(0)
-        y = 5 * control_component_all_height + control_component_height
         self.combobox_dimensionality_reduction.place(width=control_component_width,
                                                      height=control_component_height,
                                                      x=margin,
-                                                     y=y)
+                                                     y=4 * control_component_all_height + control_component_height)
 
         # Dimensions
-        self.label_dimensions = Label(frame_control, text=dimensions + ':', anchor=W, bg='red')
+        self.label_dimensions = Label(self.frame_statistical, text=dimensions + ':', anchor=W, bg='red')
         self.label_dimensions.place(width=control_parameter_width,
                                     height=control_component_height,
                                     x=3 * margin // 2 + control_component_width,
-                                    y=5 * control_component_all_height)
-        self.entry_dimensions = Entry(frame_control)
+                                    y=4 * control_component_all_height)
+        self.entry_dimensions = Entry(self.frame_statistical)
         self.entry_dimensions.place(width=control_parameter_width,
                                     height=control_component_height,
                                     x=2 * margin + control_component_width,
-                                    y=5 * control_component_all_height + control_component_height)
+                                    y=4 * control_component_all_height + control_component_height)
 
         # Model
-        self.label_model = Label(frame_control, text=model + ':', anchor=W, bg='red')
+        self.label_model = Label(self.frame_statistical, text=model + ':', anchor=W, bg='red')
         self.label_model.place(width=control_component_width,
                                height=control_component_height,
                                x=margin // 2,
-                               y=6 * control_component_all_height)
-        self.combobox_model = ttk.Combobox(frame_control, state='readonly')
+                               y=5 * control_component_all_height)
+        self.combobox_model = ttk.Combobox(self.frame_statistical, state='readonly')
         self.combobox_model['values'] = MODELS
         self.combobox_model.current(5)
         self.combobox_model.place(width=control_component_width,
                                   height=control_component_height,
                                   x=margin,
-                                  y=6 * control_component_all_height + control_component_height)
+                                  y=5 * control_component_all_height + control_component_height)
 
         # Model Parameter
-        self.label_model_parameter = Label(frame_control, text="Model Parameter:", anchor=W, bg='red')
+        self.label_model_parameter = Label(self.frame_statistical, text="Model Parameter:", anchor=W, bg='red')
         self.label_model_parameter.place(width=control_parameter_width,
                                          height=control_component_height,
                                          x=3 * margin // 2 + control_component_width,
-                                         y=6 * control_component_all_height)
-        self.entry_model_parameter = Entry(frame_control)
-        y = 6 * control_component_all_height + control_component_height
+                                         y=5 * control_component_all_height)
+        self.entry_model_parameter = Entry(self.frame_statistical)
         self.entry_model_parameter.place(width=control_parameter_width,
                                          height=control_component_height,
                                          x=2 * margin + control_component_width,
-                                         y=y)
+                                         y=5 * control_component_all_height + control_component_height)
 
         # Test Method
-        self.label_test_method = Label(frame_control, text=test_strategy + ':', anchor=W, bg='red')
+        self.label_test_method = Label(self.frame_statistical, text=test_strategy + ':', anchor=W, bg='red')
         self.label_test_method.place(width=control_component_width,
                                      height=control_component_height,
                                      x=margin // 2,
-                                     y=7 * control_component_all_height)
-        self.combobox_test_strategy = ttk.Combobox(frame_control, state='readonly')
+                                     y=6 * control_component_all_height)
+        self.combobox_test_strategy = ttk.Combobox(self.frame_statistical, state='readonly')
         self.combobox_test_strategy['values'] = sfe.TEST_STRATEGIES
         self.combobox_test_strategy.current(0)
-        y = 7 * control_component_all_height + control_component_height
         self.combobox_test_strategy.place(width=control_component_width,
                                           height=control_component_height,
                                           x=margin,
-                                          y=y)
+                                          y=6 * control_component_all_height + control_component_height)
 
         # Test Parameter
-        self.label_test_parameter = Label(frame_control, text=test_parameter + ':', anchor=W, bg='red')
+        self.label_test_parameter = Label(self.frame_statistical, text=test_parameter + ':', anchor=W, bg='red')
         self.label_test_parameter.place(width=control_parameter_width,
                                         height=control_component_height,
                                         x=3 * margin // 2 + control_component_width,
-                                        y=7 * control_component_all_height)
-        self.entry_test_parameter = Entry(frame_control)
-        y = 7 * control_component_all_height + control_component_height
+                                        y=6 * control_component_all_height)
+        self.entry_test_parameter = Entry(self.frame_statistical)
         self.entry_test_parameter.place(width=control_parameter_width,
                                         height=control_component_height,
                                         x=2 * margin + control_component_width,
-                                        y=y)
+                                        y=6 * control_component_all_height + control_component_height)
 
         # Buttons
-        self.button_test = Button(frame_control,
-                                  text="Test",
-                                  command=lambda: self.__test())
-        self.button_test.place(width=button_width,
-                               height=control_component_height,
-                               x=margin,
-                               y=8 * control_component_all_height)
+        self.button_test_sfe = Button(self.frame_statistical,
+                                      text="Test",
+                                      command=lambda: self.__test_sfe())
+        self.button_test_sfe.place(width=button_width_sfe,
+                                   height=control_component_height,
+                                   x=margin,
+                                   y=7 * control_component_all_height)
 
-        self.button_confusion_matrix = Button(frame_control,
+        self.button_confusion_matrix = Button(self.frame_statistical,
                                               text="Test Matrix",
                                               command=lambda: self.__show_confusion_matrix())
-        self.button_confusion_matrix.place(width=button_width,
+        self.button_confusion_matrix.place(width=button_width_sfe,
                                            height=control_component_height,
-                                           x=2 * margin + button_width,
-                                           y=8 * control_component_all_height)
+                                           x=2 * margin + button_width_sfe,
+                                           y=7 * control_component_all_height)
 
-        self.button_boxplot = Button(frame_control,
-                                     text="Test Accuracy",
-                                     command=lambda: self.__show_accuracy())
-        self.button_boxplot.place(width=button_width,
-                                  height=control_component_height,
-                                  x=3 * margin + 2 * button_width,
-                                  y=8 * control_component_all_height)
+        self.button_accuracy_sfe = Button(self.frame_statistical,
+                                          text="Test Accuracy",
+                                          command=lambda: self.__show_accuracy_sfe())
+        self.button_accuracy_sfe.place(width=button_width_sfe,
+                                       height=control_component_height,
+                                       x=3 * margin + 2 * button_width_sfe,
+                                       y=7 * control_component_all_height)
 
-        self.button_predict = Button(frame_control,
-                                     text="Predict",
-                                     command=lambda: self.__predict())
-        self.button_predict.place(width=button_width,
-                                  height=control_component_height,
-                                  x=4 * margin + 3 * button_width,
-                                  y=8 * control_component_all_height)
+        self.button_predict_sfe = Button(self.frame_statistical,
+                                         text="Predict",
+                                         command=lambda: self.__predict_sfe())
+        self.button_predict_sfe.place(width=button_width_sfe,
+                                      height=control_component_height,
+                                      x=4 * margin + 3 * button_width_sfe,
+                                      y=7 * control_component_all_height)
 
+        # Convolutional Neural Network Method Frame
+        # Input Data Type
+        self.label_data_type_cnn = Label(self.frame_cnn, text=input_data_type + ':', anchor=W, bg='red')
+        self.label_data_type_cnn.place(width=control_component_width - control_address_width_acc,
+                                       height=control_component_height,
+                                       x=margin // 2,
+                                       y=0)
+        self.combobox_data_type_cnn = ttk.Combobox(self.frame_cnn, state='readonly')
+        self.combobox_data_type_cnn['values'] = DATA_TYPE
+        self.combobox_data_type_cnn.current(1)
+        self.combobox_data_type_cnn.place(width=control_component_width - control_address_width_acc,
+                                          height=control_component_height,
+                                          x=margin,
+                                          y=control_component_height)
+
+        # Load Address
+        self.label_load_address_cnn = Label(self.frame_cnn, text=load_address + ':', anchor=W, bg='red')
+        self.label_load_address_cnn.place(width=control_parameter_width - 60,
+                                          height=control_component_height,
+                                          x=3 * margin // 2 + control_component_width - control_address_width_acc,
+                                          y=0)
+        self.button_load_address_cnn = Button(self.frame_cnn,
+                                              text='Browse...',
+                                              command=lambda: self.__browse_data_address())
+        x = 3 * margin // 2 \
+            + control_component_width \
+            + control_parameter_width \
+            - control_address_width_acc - 55
+        self.button_load_address_cnn.place(width=55,
+                                           height=control_component_height,
+                                           x=x,
+                                           y=0)
+        self.label_current_load_address_cnn = Label(self.frame_cnn, text="No folder", anchor=W, bg='red')
+        self.label_current_load_address_cnn.place(width=control_parameter_width + 100,
+                                                  height=control_component_height,
+                                                  x=2 * margin + control_component_width - control_address_width_acc,
+                                                  y=control_component_height)
+
+        # Model Address
+        self.label_model_address = Label(self.frame_cnn, text=save_address + ':', anchor=W, bg='red')
+        self.label_model_address.place(width=control_parameter_width - 60,
+                                       height=control_component_height,
+                                       x=margin // 2,
+                                       y=control_component_all_height)
+        self.button_model_address = Button(self.frame_cnn,
+                                           text='Browse...',
+                                           command=lambda: self.__browse_model_address())
+        self.button_model_address.place(width=55,
+                                        height=control_component_height,
+                                        x=margin // 2 + control_parameter_width - 55,
+                                        y=control_component_all_height)
+        self.label_current_model_address = Label(self.frame_cnn, text="No folder", anchor=W, bg='red')
+        self.label_current_model_address.place(width=-3 * margin // 2,
+                                               height=control_component_height,
+                                               relwidth=1,
+                                               relheight=0,
+                                               x=margin,
+                                               y=control_component_all_height + control_component_height)
+
+        # Buttons
+        self.button_test = Button(self.frame_cnn,
+                                  text="Test",
+                                  command=lambda: self.__test_cnn())
+        self.button_test.place(width=button_width_cnn,
+                               height=control_component_height,
+                               x=margin,
+                               y=2 * control_component_all_height)
+
+        self.button_accuracy_sfe = Button(self.frame_cnn,
+                                          text="Show Accuracy",
+                                          command=lambda: self.__show_accuracy_cnn())
+        self.button_accuracy_sfe.place(width=button_width_cnn,
+                                       height=control_component_height,
+                                       x=2 * margin + button_width_cnn,
+                                       y=2 * control_component_all_height)
+
+        self.button_predict_sfe = Button(self.frame_cnn,
+                                         text="Predict",
+                                         command=lambda: self.__predict_cnn())
+        self.button_predict_sfe.place(width=button_width_cnn,
+                                      height=control_component_height,
+                                      x=3 * margin + 2 * button_width_cnn,
+                                      y=2 * control_component_all_height)
+
+        self.__select_method()
         self.root.mainloop()
 
     def __set_image(self, path):
@@ -421,13 +519,21 @@ class GUImoonic:
         if self.__current_image is not None:
             self.__redraw_image()
 
-    # noinspection PyUnusedLocal
     def __select_method(self):
-        print('Select method:', self.combobox_method.get())
+        selected_method = self.combobox_method.get()
+        print('Select method:', selected_method)
+        if selected_method == statistical:
+            self.frame_statistical.place(relwidth=1, relheight=1)
+            self.frame_cnn.place(relwidth=0, relheight=0)
+        elif selected_method == cnn:
+            self.frame_statistical.place(relwidth=0, relheight=0)
+            self.frame_cnn.place(relwidth=1, relheight=1)
+        self.root.update()
 
+    # Statistical Methods
     def __browse_load_address(self):
         file_name_len = 41
-        data_type = self.combobox_data_type.get()
+        data_type = self.combobox_data_type_sfe.get()
         if data_type == raw:
             address = filedialog.askdirectory()
         elif data_type == processed:
@@ -438,7 +544,7 @@ class GUImoonic:
             return
         self.__current_load_address = address
         address = files.shrink_file_name(address, file_name_len)
-        self.label_current_load_address.config(text=address)
+        self.label_current_load_address_sfe.config(text=address)
 
     def __browse_save_address(self):
         file_name_len = 41
@@ -449,9 +555,9 @@ class GUImoonic:
         address = files.shrink_file_name(address, file_name_len)
         self.label_current_save_address.config(text=address)
 
-    def __test(self):
+    def __test_sfe(self):
         self.__set_image(image_reading_data)
-        self.__state[input_data_type] = self.combobox_data_type.get()
+        self.__state[input_data_type] = self.combobox_data_type_sfe.get()
         print('Data type:', self.__state[input_data_type])
         if self.__state[input_data_type] == raw:
             self.__har.load_data(self.__current_load_address)
@@ -543,11 +649,11 @@ class GUImoonic:
             normalize=True)
         self.__set_image(image_plot)
 
-    def __show_accuracy(self):
+    def __show_accuracy_sfe(self):
         plot.normal(self.__current_result[test.constants.ACCURACY])
         self.__set_image(image_plot)
 
-    def __predict(self):
+    def __predict_sfe(self):
         address = filedialog.askopenfilename()
         if address == '':
             return
@@ -565,3 +671,73 @@ class GUImoonic:
             self.__har.lda(train=False)
 
         self.__set_image(image_class[self.__har.predict()[0][0]])
+
+    # Convolutional Neural Network Methods
+    def __browse_data_address(self):
+        file_name_len = 41
+        address = filedialog.askdirectory()
+        if address == '':
+            return
+        address = files.separate_by_os(address)
+        address = files.end_with_sep(address)
+        self.__current_data_address = address
+        address = files.shrink_file_name(address, file_name_len)
+        self.label_current_load_address_cnn.config(text=address)
+
+    def __browse_model_address(self):
+        file_name_len = 58
+        address = filedialog.askdirectory()
+        if address == '':
+            return
+        address = files.separate_by_os(address)
+        address = files.end_with_sep(address)
+        self.__current_model_address = address
+        address = files.shrink_file_name(address, file_name_len)
+        self.label_current_model_address.config(text=address)
+
+        self.__cnn = CNN(self.__current_model_address + 'model_{}.ckpt')
+        self.__current_result = (self.__cnn.training_accuracy, self.__cnn.testing_accuracy)
+        self.__show_accuracy_cnn()
+
+    def __test_cnn(self):
+        self.__set_image(image_reading_data)
+        self.__state[input_data_type] = self.combobox_data_type_cnn.get()
+        print('Data type:', self.__state[input_data_type])
+        if self.__state[input_data_type] == raw:
+            self.__cnn.read_data(self.__current_data_address)
+            self.__cnn.save_data(self.__current_model_address)
+        elif self.__state[input_data_type] == processed:
+            self.__cnn.load_data(self.__current_data_address)
+        else:
+            return
+        self.__set_image(image_testing_model)
+        self.__cnn.split_data()
+        model_address = self.__current_model_address
+        if model_address is not None:
+            model_address = model_address + 'model_{}.ckpt'
+
+        checkpoints = files.get_checkpoints_list(model_address[:-13])
+        if len(checkpoints) > 0:
+            self.__cnn.run(path=model_address, last_checkpoint=checkpoints[-1])
+        else:
+            self.__cnn.run(path=model_address)
+        self.__current_result = (self.__cnn.training_accuracy, self.__cnn.testing_accuracy)
+        self.__show_accuracy_cnn()
+
+    def __show_accuracy_cnn(self):
+        plot.trend(self.__current_result)
+        self.__set_image(image_plot)
+
+    def __predict_cnn(self):
+        address = filedialog.askopenfilename()
+        if address == '':
+            return
+        address = files.separate_by_os(address)
+        if address == '':
+            address = None
+
+        model_address = None
+        if self.__current_model_address is not None:
+            model_address = self.__current_model_address + 'model_{}.ckpt'
+        result = CNN().predict(model=model_address, path=address)[0]
+        self.__set_image(image_class['a{:02}'.format(result)])

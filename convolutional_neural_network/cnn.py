@@ -12,9 +12,9 @@ SAVE_DATA = True
 
 
 class CNN:
-    def __init__(self):
+    def __init__(self, config_address=None):
         # config attributes
-        self.CHECKPOINT_STEP = 2
+        self.CHECKPOINT_STEP = 1
 
         self.ACTIVITIES = 19
 
@@ -28,9 +28,21 @@ class CNN:
         self.NUM_HIDDEN = 1000
 
         self.LEARNING_RATE = 0.0001
-        self.TRAINING_EPOCHS = 1
+        self.TRAINING_EPOCHS = 3
 
         self.TOTAL_BATCHES = 1
+
+        self.training_accuracy = list()
+        self.testing_accuracy = list()
+        self.cost_history = np.empty(shape=[1], dtype=float)
+
+        # load config
+        try:
+            self.__load_config(config_address.format('config') + '.pkl')
+        except FileNotFoundError:
+            pass
+        except AttributeError:
+            pass
 
         # attributes
         self.__data = None  # type: pd.DataFrame
@@ -47,9 +59,11 @@ class CNN:
         self.__test_x = None
         self.__test_y = None
 
-    def read_data(self):
+    def read_data(self, root_dir=None):
+        if root_dir is None:
+            root_dir = os.sep.join(['.', 'data', ''])
         self.__activity = None
-        for f, p, a in get_file():
+        for f, p, a in get_file(root_dir):
             ndf = pd.read_csv(f, header=None).values.reshape(1, 1, 125, 45)  # type: np.ndarray
             self.__data = np.concatenate((self.__data, ndf), axis=0) \
                 if self.__data is not None \
@@ -68,6 +82,9 @@ class CNN:
     def __save_config(self, path):
         with open(path, 'wb') as output_file:
             config = {
+                "TRAINING_ACCURACY": self.training_accuracy,
+                "TESTING_ACCURACY": self.testing_accuracy,
+                "COST_HISTORY": self.cost_history,
                 "CHECKPOINT_STEP": self.CHECKPOINT_STEP,
                 "ACTIVITIES": self.ACTIVITIES,
                 "HEIGHT": self.HEIGHT,
@@ -86,6 +103,9 @@ class CNN:
     def __load_config(self, path):
         with open(path, 'rb') as input_file:
             config = pickle.load(input_file)
+            self.training_accuracy = config["TRAINING_ACCURACY"]
+            self.testing_accuracy = config["TESTING_ACCURACY"]
+            self.cost_history = config["COST_HISTORY"]
             self.CHECKPOINT_STEP = config["CHECKPOINT_STEP"]
             self.ACTIVITIES = config["ACTIVITIES"]
             self.HEIGHT = config["HEIGHT"]
@@ -100,11 +120,15 @@ class CNN:
             self.TOTAL_BATCHES = config["TOTAL_BATCHES"]
 
     def save_data(self, path):
+        if path is None:
+            path = os.sep.join(['.', 'convolutional_neural_network', ''])
         np.save(path + 'data.npy', self.__data)
         np.save(path + 'person.npy', self.__person)
         np.save(path + 'activity.npy', self.__activity)
 
     def load_data(self, path):
+        if path is None:
+            path = os.sep.join(['.', 'convolutional_neural_network', ''])
         self.__data = np.load(path + 'data.npy')
         self.__person = np.load(path + 'person.npy')
         self.__activity = np.load(path + 'activity.npy')
@@ -118,13 +142,7 @@ class CNN:
         self.__test_x = self.__data[~train_test_split]
         self.__test_y = dummies[~train_test_split]
 
-    def __build_model(self, config=None):
-        if config is not None:
-            try:
-                self.__load_config(config)
-            except FileNotFoundError:
-                self.__save_config(config)
-
+    def __build_model(self):
         # noinspection PyShadowingNames
         def __weight_variable(shape):
             initial = tf.truncated_normal(shape, stddev=0.1)
@@ -153,6 +171,8 @@ class CNN:
             self.TOTAL_BATCHES = self.__train_x.shape[0] // self.BATCH_SIZE
         except AttributeError:
             pass
+
+        tf.reset_default_graph()
 
         self.__X = tf.placeholder(tf.float32,
                                   shape=[None,
@@ -199,18 +219,32 @@ class CNN:
         correct_prediction = tf.equal(tf.argmax(y_, 1), tf.argmax(self.__Y, 1))
         self.__accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    def run(self, path=None):
+    def run(self, path=None, last_checkpoint=None):
         if path is None:
             path = os.sep.join(['.', 'convolutional_neural_network', 'model_{}.ckpt'])
-        self.__build_model(config=path.format('config') + '.pkl')
+        config_address = path.format('config') + '.pkl'
+        try:
+            self.__load_config(config_address)
+        except FileNotFoundError:
+            del self.training_accuracy[:]
+            del self.testing_accuracy[:]
+            self.__save_config(config_address)
 
-        training_accuracy = list()
-        testing_accuracy = list()
+        self.__build_model()
+
         with tf.Session() as session:
-            cost_history = np.empty(shape=[1], dtype=float)
-            tf.global_variables_initializer().run()
+            if last_checkpoint is None:
+                tf.global_variables_initializer().run()
+                starting_epoch = 0
+            elif last_checkpoint == 'final':
+                return
+            else:
+                saver = tf.train.Saver()
+                saver.restore(session, path.format(last_checkpoint))
+                starting_epoch = int(last_checkpoint)
+                print('Continue from {} epoch...'.format(starting_epoch))
             print('{}: '.format(datetime.datetime.now()))
-            for epoch in range(self.TRAINING_EPOCHS):
+            for epoch in range(starting_epoch, self.TRAINING_EPOCHS):
                 for b in range(self.TOTAL_BATCHES):
                     offset = (b * self.BATCH_SIZE) % \
                              (self.__train_y.shape[0] - self.BATCH_SIZE)
@@ -220,29 +254,35 @@ class CNN:
                                         self.__loss],
                                        feed_dict={self.__X: batch_x,
                                                   self.__Y: batch_y})
-                    cost_history = np.append(cost_history, c)
+                    self.cost_history = np.append(self.cost_history, c)
                 print('{}. {}: '.format((epoch + 1), datetime.datetime.now()), end='')
-                training_accuracy.append(session.run(self.__accuracy,
-                                                     feed_dict={self.__X: self.__train_x,
-                                                                self.__Y: self.__train_y}))
-                print("Training Accuracy:", training_accuracy[-1], end=' ')
-                testing_accuracy.append(session.run(self.__accuracy,
-                                                    feed_dict={self.__X: self.__test_x,
-                                                               self.__Y: self.__test_y}))
-                print("Testing Accuracy:", testing_accuracy[-1])
-                if epoch % self.CHECKPOINT_STEP == 0:
+                self.training_accuracy.append(session.run(self.__accuracy,
+                                                          feed_dict={self.__X: self.__train_x,
+                                                                     self.__Y: self.__train_y}))
+                print("Training Accuracy:", self.training_accuracy[-1], end=' ')
+                self.testing_accuracy.append(session.run(self.__accuracy,
+                                                         feed_dict={self.__X: self.__test_x,
+                                                                    self.__Y: self.__test_y}))
+                print("Testing Accuracy:", self.testing_accuracy[-1])
+                if (epoch + 1) % self.CHECKPOINT_STEP == 0 and epoch + 1 != self.TRAINING_EPOCHS:
                     saver = tf.train.Saver()
-                    saver.save(session, path.format(epoch))
+                    saver.save(session, path.format(epoch + 1))
+                    self.__save_config(config_address)
             saver = tf.train.Saver()
             saver.save(session, path.format('final'))
+            self.__save_config(config_address)
 
     def predict(self, model=None, path=None):
+        print(model, path)
         if model is None:
             model = os.sep.join(['.', 'convolutional_neural_network', 'model_{}.ckpt'])
         if path is None:
             path = './data/a01/p1/s01.txt'
 
-        self.__build_model(config=model.format('config') + '.pkl')
+        config_address = model.format('config') + '.pkl'
+        self.__load_config(config_address)
+
+        self.__build_model()
 
         ndf = pd.read_csv(path, header=None).values.reshape(1, 1, 125, 45)  # type: np.ndarray
         with tf.Session() as session:
@@ -377,7 +417,7 @@ def new_cnn_main():
 
 
 def old_main():
-    train = False
+    train = True
     predict = True
     cnn = CNN()
     if train:

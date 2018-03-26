@@ -45,7 +45,6 @@ def confusion_matrix(cm,
 
 def normal(x, image_address='.\\images\\tmp.png'):
     plt.figure(figsize=(16, 9))
-    print(x)
     mu = np.mean(x)
     sigma = np.std(x)
     count, bins, ignored = plt.hist(x, 10, normed=True)
@@ -56,5 +55,16 @@ def normal(x, image_address='.\\images\\tmp.png'):
 
     plt.ylabel('Count / Probability')
     plt.xlabel('Accuracy')
+    plt.tight_layout()
+    plt.savefig(image_address, dpi=100)
+
+
+def trend(trends, image_address='.\\images\\tmp.png'):
+    plt.figure(figsize=(16, 9))
+    plt.plot(trends[0], color='blue')
+    plt.plot(trends[1], color='r')
+
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epochs')
     plt.tight_layout()
     plt.savefig(image_address, dpi=100)
