@@ -39,6 +39,28 @@ image_class = {
     'a19': '.\\images\\A19-PlayingBasketball.jpg',
 }
 
+classes = [
+    'Sitting',
+    'Standing',
+    'Lying on Back',
+    'Lying on Right Side',
+    'Ascending Stairs',
+    'Descending Stairs',
+    'Standing in Elev.',
+    'Moving Around Elev.',
+    'Walking in parking',
+    'Treadmill 4km/h Flat',
+    'Treadmill 4km/h 15',
+    'Treadmill 8km/h',
+    'Stepper',
+    'Cross Trainer',
+    'Exercise Bike H',
+    'Exercise Bike V',
+    'Rowing',
+    'Jumping',
+    'Playing Basketball',
+]
+
 # Inputs
 method = 'Method'
 input_data_type = 'Input Data Type'
@@ -164,7 +186,7 @@ class GUImoonic:
                                 y=0)
         self.combobox_method = ttk.Combobox(frame_control, state='readonly')
         self.combobox_method['values'] = METHODS
-        self.combobox_method.current(1)
+        self.combobox_method.current(0)
         self.combobox_method.bind('<<ComboboxSelected>>', lambda event: self.__select_method())
         self.combobox_method.place(width=control_component_width,
                                    height=control_component_height,
@@ -629,7 +651,6 @@ class GUImoonic:
             return
 
         self.__set_image(image_testing_model)
-        self.__har.drop_extra_features()
 
         self.__state[model] = self.combobox_model.get()
         print('Model:', model)
@@ -646,7 +667,7 @@ class GUImoonic:
     def __show_confusion_matrix(self):
         plot.confusion_matrix(
             self.__current_result[test.constants.CONFUSION_MATRIX],
-            classes=['a{}'.format(i) for i in range(1, 20)],
+            classes=classes,
             normalize=True)
         self.__set_image(image_plot)
 

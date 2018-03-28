@@ -25,7 +25,7 @@ def confusion_matrix(cm,
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
+    plt.xticks(tick_marks, classes, rotation=90)
     plt.yticks(tick_marks, classes)
 
     fmt = '.2f' if normalize else 'd'
@@ -68,3 +68,17 @@ def trend(trends, image_address='.\\images\\tmp.png'):
     plt.xlabel('Epochs')
     plt.tight_layout()
     plt.savefig(image_address, dpi=100)
+
+
+def plot_features(x, y):
+    x = x.as_matrix()
+    plt.subplot(2, 2, 1)
+    plt.scatter(x[:, 0], x[:, 1], c=y, s=1, alpha=0.2)
+    plt.subplot(2, 2, 2)
+    plt.scatter(x[:, 1], x[:, 2], c=y, s=1, alpha=0.2)
+    plt.subplot(2, 2, 3)
+    plt.scatter(x[:, 2], x[:, 3], c=y, s=1, alpha=0.2)
+    plt.subplot(2, 2, 4)
+    plt.scatter(x[:, 3], x[:, 4], c=y, s=1, alpha=0.2)
+    plt.tight_layout()
+    plt.show()

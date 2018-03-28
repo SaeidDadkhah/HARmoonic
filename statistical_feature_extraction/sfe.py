@@ -19,6 +19,7 @@ from sklearn.gaussian_process.kernels import RBF
 
 from statistical_feature_extraction.test import constants
 from statistical_feature_extraction.test import executor
+from gui import plot
 
 reload_data = False
 save_info = False
@@ -33,6 +34,28 @@ _columns.append('subject')
 _columns.append('activity')
 
 _nominal_columns = [_columns[-2], _columns[-1]]
+
+classes = [
+    'Sitting',
+    'Standing',
+    'Lying on Back',
+    'Lying on Right Side',
+    'Ascending Stairs',
+    'Descending Stairs',
+    'Standing in Elev.',
+    'Moving Around Elev.',
+    'Walking in parking',
+    'Treadmill 4km/h Flat',
+    'Treadmill 4km/h 15',
+    'Treadmill 8km/h',
+    'Stepper',
+    'Cross Trainer',
+    'Exercise Bike H',
+    'Exercise Bike V',
+    'Rowing',
+    'Jumping',
+    'Playing Basketball',
+]
 
 LOGISTIC_REGRESSION = 'Logistic Regression'
 RANDOM_FOREST = 'Random Forest'
@@ -62,7 +85,7 @@ MODELS = {
 TEST_STRATEGIES = [
     # constants.REPEATED_RANDOM_SUB_SAMPLING,
     constants.K_FOLD,
-    # constants.LEAVE_ONE_OUT
+    constants.LEAVE_ONE_OUT
 ]
 
 
@@ -198,14 +221,13 @@ class HAR:
             x = self.__lda.transform(x)  # type: pd.DataFrame
             self.__test_x = pd.DataFrame(x).join(y)
 
-    def drop_extra_features(self):
-        y = self.__data[['activity']]
-        x = self.__data.drop(_nominal_columns, axis=1)
-        self.__data = pd.DataFrame(x).join(y)
+    def plot_features(self):
+        plot.plot_features(self.__data.drop(_nominal_columns, axis=1),
+                           self.__data['activity'].apply(lambda x: int(x[1:])))
 
     def split_data(self):
         self.__train_y = self.__data[['activity']]
-        self.__train_x = self.__data.drop('activity', axis=1)
+        self.__train_x = self.__data.drop(_nominal_columns, axis=1)
 
     def select_models(self, models):
         del self.__selected_models[:]
@@ -229,10 +251,11 @@ class HAR:
 
         for model in self.__selected_models:
             test_result_list.append(executor.test(strategy=strategy,
-                                                  x=self.__data.drop('activity', axis=1),
+                                                  x=self.__data.drop(_nominal_columns, axis=1),
                                                   y=self.__data['activity'],
                                                   model=self.__models[model]["model"],
-                                                  k=10))
+                                                  k=10,
+                                                  groups=self.__data['subject']))
         return test_result_list
 
 
@@ -290,24 +313,27 @@ def main():
         if save_info:
             har.save_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl']))
     else:
-        har.load_pickle()
-
+        har.load_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample - Copy.pkl']))
+        # har.load_pickle()
     print('loaded')
+
+    set_seed(9231066)
     har.shuffle()
     har.normalize()
-    # har.dimensionality_reduction(30)
-    har.lda(19)
+    # har.pca(35)
+    har.lda(18)
+    # har.plot_features()
+
     # har.split_data(0.4)
-    har.drop_extra_features()
     models = [
         # LOGISTIC_REGRESSION,
-        # RANDOM_FOREST,
-        # SVM,
-        # LINEAR_SVC,
-        # K_NEAREST_NEIGHBORS,
+        K_NEAREST_NEIGHBORS,
         NAIVE_BAYES,
-        # MLP,
-        # DECISION_TREE,
+        DECISION_TREE,
+        RANDOM_FOREST,
+        SVM,
+        LINEAR_SVM,
+        MULTILAYER_PERCEPTRON,
         # ADABOOST,
         # RADIAL_BASIS_FUNCTION,
     ]
@@ -315,7 +341,7 @@ def main():
         har.select_models(models=[model])
         # har.train()
 
-        result_list = har.test(constants.K_FOLD)
+        result_list = har.test(constants.LEAVE_ONE_OUT)
         cm = result_list[0][constants.CONFUSION_MATRIX]
         for ii in range(0, 19):
             for jj in range(0, 19):
@@ -325,24 +351,21 @@ def main():
         accuracy = result_list[0][constants.ACCURACY]
         print(np.mean(accuracy), end=' ±')
         print(np.std(accuracy), end='\n\n')
-        classes = ['a{}'.format(i) for i in range(1, 20)]
-        print(classes)
-        # from gui import plot
-        # fig = plot.confusion_matrix(
-        #     cm,
-        #     classes=['a{}'.format(i) for i in range(1, 20)],
-        #     normalize=True)
-        # import matplotlib.pyplot as plt
-        # plt.show(fig)
+        plot.confusion_matrix(
+            cm,
+            classes=classes,
+            normalize=True,
+            image_address=os.sep.join(['..', 'Figures', 'CM', 'L1O_{}.png'.format(model)])
+        )
 
-    har.split_data()
-    har.train()
-    har.load_instance()
-    har.normalize(train=False)
-    # har.dimensionality_reduction(30)
-    har.lda(train=False)
-    # har.split_data(0.4)
-    print(har.predict()[0][0])
+        # har.split_data()
+        # har.train()
+        # har.load_instance()
+        # har.normalize(train=False)
+        # # har.dimensionality_reduction(30)
+        # har.lda(train=False)
+        # # har.split_data(0.4)
+        # print(har.predict()[0][0])
 
 
 if __name__ == "__main__":
