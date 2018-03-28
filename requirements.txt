@@ -1,0 +1,13 @@
+# GUI
+pillow # add image to tkinter
+matplotlib # plot
+
+# Preprocess
+numpy
+pandas
+
+# ML
+scikit-learn # classifiers
+
+# NN
+tensorflow
