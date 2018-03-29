@@ -26,6 +26,7 @@ save_info = False
 np.random.seed(9231066)
 
 _feature_vector_size = 1395
+# _feature_vector_size = 2 * 1395 // 5
 
 _columns = list(range(0, _feature_vector_size))
 # noinspection PyTypeChecker
@@ -126,15 +127,19 @@ class HAR:
         self.__test_x = None
         self.__test_y = None
 
-    def load_data(self, root_dir=None):
-        if root_dir is None:
-            root_dir = os.sep.join(['.', 'data', ''])
+    def load_data(self, root_dir=os.sep.join(['.', 'data', ''])):
         self.__data = pd.DataFrame()
         for dir_name, subdir_list, file_list in os.walk(root_dir):
             # data_list = list()
             print(dir_name)
             for f in file_list:
                 sensors_data = pd.read_csv(dir_name + os.sep + f, header=None)
+                # sensors_data = sensors_data.iloc[:, [0:9]  # T
+                # sensors_data = sensors_data.iloc[:, 9:18]  # RA
+                # sensors_data = sensors_data.iloc[:, 18:27]  # LA
+                # sensors_data = sensors_data.iloc[:, 27:36]  # RL
+                # sensors_data = sensors_data.iloc[:, 36:45]  # LL
+                # sensors_data = sensors_data.iloc[:, 18:36]  # LA + RL
                 sensors_data = _feature_extraction(sensors_data)
                 sensors_data.set_value(_feature_vector_size, dir_name.split(os.sep)[-1])
                 sensors_data.set_value(_feature_vector_size + 1, dir_name.split(os.sep)[-2])
@@ -145,9 +150,7 @@ class HAR:
 
         print(self.__data.tail())
 
-    def load_instance(self, path=None):
-        if path is None:
-            path = os.sep.join(['.', 'data', 'a01', 'p1', 's01.txt'])
+    def load_instance(self, path=os.sep.join(['.', 'data', 'a01', 'p1', 's01.txt'])):
         self.__test_x = pd.DataFrame()
         sensors_data = pd.read_csv(path, header=None)
         sensors_data = _feature_extraction(sensors_data)
@@ -160,9 +163,7 @@ class HAR:
     def save_pickle(self, path):
         self.__data.to_pickle(path)
 
-    def load_pickle(self, path=None):
-        if path is None:
-            path = os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl'])
+    def load_pickle(self, path=os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl'])):
         self.__data = pd.read_pickle(path)
         self.__data = self.__data.reset_index(drop=True)
 
@@ -277,6 +278,7 @@ def _feature_extraction(data: pd.DataFrame) -> pd.Series:
     largest_values = pd.Series()
     largest_angles = pd.Series()
     largest_indices = pd.Series()
+    # for i in range(0, 18):
     for i in range(0, 45):
         five_largest_idx = nlargest_index(fft.ix[:, i].map(abs), 5)  # is map(abs) redundant?
         largest_indices = largest_indices.append(pd.Series(five_largest_idx),
@@ -313,8 +315,7 @@ def main():
         if save_info:
             har.save_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl']))
     else:
-        har.load_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample - Copy.pkl']))
-        # har.load_pickle()
+        har.load_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl']))
     print('loaded')
 
     set_seed(9231066)
@@ -351,12 +352,12 @@ def main():
         accuracy = result_list[0][constants.ACCURACY]
         print(np.mean(accuracy), end=' ±')
         print(np.std(accuracy), end='\n\n')
-        plot.confusion_matrix(
-            cm,
-            classes=classes,
-            normalize=True,
-            image_address=os.sep.join(['..', 'Figures', 'CM', 'L1O_{}.png'.format(model)])
-        )
+        # plot.confusion_matrix(
+        #     cm,
+        #     classes=classes,
+        #     normalize=True,
+        #     image_address=os.sep.join(['..', 'Figures', 'CM', 'KF_{}.png'.format(model)])
+        # )
 
         # har.split_data()
         # har.train()
