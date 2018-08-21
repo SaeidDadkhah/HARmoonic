@@ -26,7 +26,6 @@ save_info = False
 np.random.seed(9231066)
 
 _feature_vector_size = 1395
-# _feature_vector_size = 2 * 1395 // 5
 
 _columns = list(range(0, _feature_vector_size))
 # noinspection PyTypeChecker
@@ -134,18 +133,11 @@ class HAR:
             print(dir_name)
             for f in file_list:
                 sensors_data = pd.read_csv(dir_name + os.sep + f, header=None)
-                # sensors_data = sensors_data.iloc[:, [0:9]  # T
-                # sensors_data = sensors_data.iloc[:, 9:18]  # RA
-                # sensors_data = sensors_data.iloc[:, 18:27]  # LA
-                # sensors_data = sensors_data.iloc[:, 27:36]  # RL
-                # sensors_data = sensors_data.iloc[:, 36:45]  # LL
-                # sensors_data = sensors_data.iloc[:, 18:36]  # LA + RL
                 sensors_data = _feature_extraction(sensors_data)
                 sensors_data.set_value(_feature_vector_size, dir_name.split(os.sep)[-1])
                 sensors_data.set_value(_feature_vector_size + 1, dir_name.split(os.sep)[-2])
                 sensors_data = sensors_data.to_frame().T
                 sensors_data.columns = _columns
-                # data_list.append(sensors_data)
                 self.__data = self.__data.append(sensors_data)
 
         print(self.__data.tail())
@@ -179,6 +171,28 @@ class HAR:
 
     def load_hdf5(self, path):
         self.__data = pd.read_hdf(path, key='HAR__data')
+
+    def select_data(self, units=list(range(5)), sensors=list(range(3))):
+        print('Select Data: ', self.__data.shape, end=' ==> ')
+
+        cols = list()
+        feature_count = 31
+        unit_count = 5
+        sensor_count = 3
+        signal_count = 3
+        for feature in range(feature_count):
+            feature *= unit_count * sensor_count * signal_count
+            for unit in units:
+                unit *= sensor_count * signal_count
+                for sensor in sensors:
+                    sensor *= signal_count
+                    for signal in range(signal_count):
+                        cols.append(feature + unit + sensor + signal)
+        cols.append('subject')
+        cols.append('activity')
+
+        self.__data = self.__data[cols]
+        print(self.__data.shape)
 
     def shuffle(self):
         self.__data = self.__data.sample(frac=1).reset_index(drop=True)
@@ -278,7 +292,6 @@ def _feature_extraction(data: pd.DataFrame) -> pd.Series:
     largest_values = pd.Series()
     largest_angles = pd.Series()
     largest_indices = pd.Series()
-    # for i in range(0, 18):
     for i in range(0, 45):
         five_largest_idx = nlargest_index(fft.ix[:, i].map(abs), 5)  # is map(abs) redundant?
         largest_indices = largest_indices.append(pd.Series(five_largest_idx),
@@ -317,6 +330,7 @@ def main():
     else:
         har.load_pickle(os.sep.join(['.', 'statistical_feature_extraction', 'sample.pkl']))
     print('loaded')
+    har.select_data(units=[constants.RIGHT_ARM])
 
     set_seed(9231066)
     har.shuffle()
@@ -328,7 +342,7 @@ def main():
     # har.split_data(0.4)
     models = [
         # LOGISTIC_REGRESSION,
-        K_NEAREST_NEIGHBORS,
+        # K_NEAREST_NEIGHBORS,
         NAIVE_BAYES,
         DECISION_TREE,
         RANDOM_FOREST,
